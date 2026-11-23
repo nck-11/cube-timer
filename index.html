@@ -9,55 +9,85 @@
   <script src="timer.js" defer></script>
 </head>
 <body>
-  <main class="app">
-    <header class="topbar">
-      <a class="brand" href="index.html" aria-label="Cube Timer home">
-        <span class="brand-mark" aria-hidden="true">C</span>
-        <span>Cube Timer</span>
-      </a>
-      <span class="keyboard-hint"><kbd>SPACE</kbd> to start and stop</span>
-    </header>
+  <main class="app timer-app">
+    <div class="timer-layout">
+      <section class="timer-screen" id="timer-screen" aria-label="Speedcubing timer">
+        <header class="timer-titlebar">
+          <h1>Timer</h1>
+        </header>
 
-    <section class="timer-card" aria-label="Speedcubing timer">
-      <div class="scramble-label">SCRAMBLE</div>
-      <p class="scramble" id="scramble" aria-live="polite"></p>
-      <button class="new-scramble" id="new-scramble" type="button">New scramble</button>
-
-      <div class="timer-area">
-        <p class="timer" id="timer" role="timer" aria-label="0 seconds">0.00</p>
-        <p class="timer-hint" id="timer-hint" aria-live="polite">Hold space, then release to start</p>
-        <button class="mobile-control" id="timer-button" type="button">Start timer</button>
-      </div>
-    </section>
-
-    <section class="solves-section" aria-labelledby="solves-heading">
-      <div class="section-heading">
-        <div>
-          <p class="eyebrow">YOUR SESSION</p>
-          <h1 id="solves-heading">Recent solves</h1>
+        <div class="scramble-wrap">
+          <p class="scramble" id="scramble" aria-live="polite"></p>
+          <button class="new-scramble" id="new-scramble" type="button" aria-label="New scramble" title="New scramble">
+            <svg aria-hidden="true" viewBox="0 0 24 24">
+              <path d="M20 7v5h-5M4 17v-5h5"></path>
+              <path d="M5.5 9A7 7 0 0 1 17 6l3 6M4 12l3 6a7 7 0 0 0 11.5-3"></path>
+            </svg>
+          </button>
         </div>
-      </div>
-      <div class="averages" aria-label="Session averages">
-        <article class="average-card">
-          <span class="average-label">Ao5</span>
-          <strong class="average-time" id="ao5">--</strong>
-          <span class="average-detail">Latest 5 solves</span>
-        </article>
-        <article class="average-card">
-          <span class="average-label">Ao12</span>
-          <strong class="average-time" id="ao12">--</strong>
-          <span class="average-detail">Latest 12 solves</span>
-        </article>
-      </div>
-      <ol class="solves-list" id="solves-list" aria-live="polite">
-        <li class="empty-state">Your solve times will show up here.</li>
-      </ol>
-    </section>
 
-    <nav class="page-nav bottom-nav" aria-label="Main navigation">
+        <div class="timer-focus">
+          <div class="timer-reading">
+            <p class="timer" id="timer" role="timer" aria-label="0 seconds">0.000</p>
+            <p class="timer-hint" id="timer-hint" aria-live="polite">Hold space, then release to start</p>
+            <button class="mobile-control" id="timer-button" type="button">Start timer</button>
+          </div>
+        </div>
+
+        <div class="timer-cube-preview">
+          <div class="cube-net" role="img" aria-label="Cube colors after the current scramble">
+            <span class="cube-face cube-up"></span>
+            <span class="cube-face cube-left"></span>
+            <span class="cube-face cube-front"></span>
+            <span class="cube-face cube-right"></span>
+            <span class="cube-face cube-back"></span>
+            <span class="cube-face cube-down"></span>
+          </div>
+        </div>
+      </section>
+
+      <aside class="timer-side-panel" aria-label="Session details">
+        <div class="timer-side-tabs" role="tablist" aria-label="Session views">
+          <button class="timer-side-tab is-selected" id="solves-tab" type="button" role="tab" aria-selected="true" aria-controls="solves-panel">Solves</button>
+          <button class="timer-side-tab" id="stats-tab" type="button" role="tab" aria-selected="false" aria-controls="stats-panel" tabindex="-1">Stats</button>
+        </div>
+
+        <section class="timer-tab-panel solves-section" id="solves-panel" role="tabpanel" aria-labelledby="solves-tab">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">SESSION</p>
+              <h2 id="solves-heading">Solves</h2>
+            </div>
+          </div>
+          <ol class="solves-list" id="solves-list" aria-live="polite">
+            <li class="empty-state">Your solve times will show up here.</li>
+          </ol>
+        </section>
+
+        <section class="timer-tab-panel" id="stats-panel" role="tabpanel" aria-labelledby="stats-tab" aria-label="Session statistics" hidden>
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">SESSION</p>
+              <h2>Stats</h2>
+            </div>
+          </div>
+          <dl class="timer-stats">
+            <div class="timer-stat"><dt>Ao5</dt><dd id="ao5">--</dd></div>
+            <div class="timer-stat"><dt>Mean</dt><dd id="mean">--</dd></div>
+            <div class="timer-stat"><dt>Ao12</dt><dd id="ao12">--</dd></div>
+            <div class="timer-stat"><dt>Best</dt><dd id="best">--</dd></div>
+            <div class="timer-stat"><dt>Ao50</dt><dd id="ao50">--</dd></div>
+            <div class="timer-stat"><dt>Worst</dt><dd id="worst">--</dd></div>
+            <div class="timer-stat"><dt>Ao100</dt><dd id="ao100">--</dd></div>
+            <div class="timer-stat"><dt>Count</dt><dd id="solve-count">0</dd></div>
+          </dl>
+        </section>
+      </aside>
+    </div>
+
+    <nav class="page-nav bottom-nav timer-bottom-nav" aria-label="Timer navigation">
       <a class="nav-link is-current" href="index.html" aria-current="page">Timer</a>
-      <a class="nav-link" href="tutorial.html">CFOP guide</a>
-      <a class="nav-link" href="advanced.html">Advanced Method</a>
+      <a class="nav-link" href="advanced.html">ALGS</a>
     </nav>
 
     <footer>Times are kept for this page session only.</footer>

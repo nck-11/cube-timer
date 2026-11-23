@@ -112,6 +112,74 @@ const algorithmSets = {
       "y R2' u' R U' (R U R' u) R2 y (R U' R')",
       "y2 (R U R') y' (R2 u' R) U' (R' U R') u R2"
     ] }
+  ],
+  F2L: [
+    { group: "Right slot", algorithms: [
+      {
+        name: "Right insertion",
+        algorithm: "R U R'",
+        description: "A familiar right-hand trigger used while pairing or inserting pieces into the front-right slot."
+      },
+      {
+        name: "Right trigger with U setup",
+        algorithm: "U R U' R'",
+        description: "Adds a U-layer alignment before working the front-right slot."
+      },
+      {
+        name: "Right trigger with U' setup",
+        algorithm: "U' R U R'",
+        description: "An alternate U-layer alignment before working the front-right slot."
+      },
+      {
+        name: "Right trigger with U2 setup",
+        algorithm: "U2 R U R'",
+        description: "Uses a half-turn alignment before the right-hand trigger."
+      }
+    ] },
+    { group: "Left slot", algorithms: [
+      {
+        name: "Left insertion",
+        algorithm: "L' U' L",
+        description: "A familiar left-hand trigger used while pairing or inserting pieces into the front-left slot."
+      },
+      {
+        name: "Left trigger with U' setup",
+        algorithm: "U' L' U L",
+        description: "Adds a U-layer alignment before working the front-left slot."
+      },
+      {
+        name: "Left trigger with U setup",
+        algorithm: "U L' U' L",
+        description: "An alternate U-layer alignment before working the front-left slot."
+      },
+      {
+        name: "Left trigger with U2 setup",
+        algorithm: "U2 L' U' L",
+        description: "Uses a half-turn alignment before the left-hand trigger."
+      }
+    ] },
+    { group: "Front and back triggers", algorithms: [
+      {
+        name: "Front trigger, left",
+        algorithm: "F' U' F",
+        description: "A front-face trigger for working with pieces near the front-left side."
+      },
+      {
+        name: "Front trigger, right",
+        algorithm: "F U F'",
+        description: "The reverse front-face trigger for repositioning a pair near the front."
+      },
+      {
+        name: "Back trigger, right",
+        algorithm: "B U B'",
+        description: "A back-face trigger for working with pieces near the back-right side."
+      },
+      {
+        name: "Back trigger, left",
+        algorithm: "B' U' B",
+        description: "The reverse back-face trigger for repositioning a pair near the back."
+      }
+    ] }
   ]
 };
 
@@ -231,6 +299,7 @@ const casePatterns = {
     ]
   }
 };
+const solvedF2LPattern = "+ggg>oYYYr>oYYYr>oYYYr>+bbb";
 
 const algorithmTabs = [...document.querySelectorAll(".algorithm-tab")];
 const algorithmSearch = document.querySelector("#algorithm-search");
@@ -249,7 +318,7 @@ const algorithmPlayerAction = document.querySelector("#algorithm-player-action")
 const algorithmPlayerClose = document.querySelector("#algorithm-player-close");
 const playbackSpeedButtons = [...document.querySelectorAll(".algorithm-speed-option")];
 const playbackSpeeds = { moderate: 350, slow: 700 };
-let activeSet = "OLL";
+let activeSet = "F2L";
 let playbackSpeed = "moderate";
 let selectedAlgorithm = null;
 let activeAlgorithmPlayback = null;
@@ -270,21 +339,46 @@ function formatAlgorithmTitle(setName, caseNumber, caseName) {
 function getAlgorithms() {
   let caseNumber = 0;
   return algorithmSets[activeSet].flatMap(({ group, algorithms }) =>
-    algorithms.map((algorithm, groupIndex) => {
+    algorithms.map((entry, groupIndex) => {
       const currentCaseNumber = ++caseNumber;
+      const isF2L = activeSet === "F2L";
+      const algorithm = isF2L ? entry.algorithm : entry;
       return {
         algorithm,
         caseNumber: currentCaseNumber,
-        caseName: activeSet === "PLL" ? pllCaseNames[currentCaseNumber - 1] : "",
+        caseName: activeSet === "PLL"
+          ? pllCaseNames[currentCaseNumber - 1]
+          : isF2L
+            ? entry.name
+            : "",
+        description: isF2L ? entry.description : "",
         group,
         groupCase: groupIndex + 1,
-        pattern: casePatterns[activeSet][group][groupIndex]
+        pattern: isF2L ? solvedF2LPattern : casePatterns[activeSet][group][groupIndex],
+        setupMoves: isF2L ? parseAlgorithmMoves(invertAlgorithm(algorithm)) : []
       };
     })
   );
 }
 
-function renderCaseCube(pattern, caseNumber) {
+function invertAlgorithm(algorithm) {
+  return algorithm.trim().split(/\s+/).reverse().map((move) => {
+    if (/2'?$/u.test(move)) return move.replace(/2'?$/u, "2");
+    if (move.endsWith("'")) return move.slice(0, -1);
+    return `${move}'`;
+  }).join(" ");
+}
+
+function renderCaseCube(pattern, caseNumber, setupMoves = []) {
+  if (activeSet === "F2L") {
+    const cube = document.createElement("div");
+    cube.className = "case-cube case-cube--playback";
+    cube.setAttribute("role", "img");
+    cube.setAttribute("aria-label", `F2L trigger ${caseNumber} starting cube`);
+    cube.append(createPlaybackCube(pattern, setupMoves).model);
+    return cube;
+  }
+
   const rows = pattern.split(">").map((line) => [...line.replace(/\+/g, "")]);
   const frontTop = rows[4];
   const rightTop = rows.slice(1, 4).map((row) => row[4]);
@@ -390,7 +484,7 @@ function parseAlgorithmMoves(algorithm) {
   return parsedMoves;
 }
 
-function createPlaybackCube(pattern) {
+function createPlaybackCube(pattern, setupMoves = []) {
   const rows = pattern.split(">").map((line) => [...line.replace(/\+/g, "")]);
   const cubelets = [];
   const cubeletByPosition = new Map();
@@ -431,6 +525,13 @@ function createPlaybackCube(pattern) {
     setSticker(-1, -1, row - 1, "left", topRows[row][0]);
     setSticker(1, -1, row - 1, "right", topRows[row][4]);
   }
+
+  setupMoves.forEach((move) => {
+    const axisPosition = { x: "x", y: "y", z: "z" }[move.axis];
+    cubelets
+      .filter((cubelet) => move.layers.includes(cubelet[axisPosition]))
+      .forEach((cubelet) => rotateCubelet(cubelet, move.axis, move.quarterTurns));
+  });
 
   const model = document.createElement("div");
   model.className = "case-cube-model";
@@ -645,8 +746,8 @@ async function stepAlgorithm(direction) {
   }
 }
 
-function openAlgorithmPlayer({ pattern, algorithm, moves, setName, caseNumber, caseName, group, groupCase, button }) {
-  const cube = createPlaybackCube(pattern);
+function openAlgorithmPlayer({ pattern, setupMoves = [], algorithm, moves, setName, caseNumber, caseName, group, groupCase, button }) {
+  const cube = createPlaybackCube(pattern, setupMoves);
   algorithmPlayerCube.replaceChildren(cube.model);
   algorithmPlayerCube.setAttribute(
     "aria-label",
@@ -766,23 +867,26 @@ function renderAlgorithms() {
   });
 
   algorithmPanel.replaceChildren();
-  algorithms.forEach(({ algorithm, caseNumber, caseName, group, groupCase, pattern }) => {
+  algorithms.forEach(({ algorithm, caseNumber, caseName, description, group, groupCase, pattern, setupMoves }) => {
     const card = document.createElement("article");
     const heading = document.createElement("div");
     const title = document.createElement("strong");
     const category = document.createElement("span");
     const moves = document.createElement("code");
-    const cube = renderCaseCube(pattern, caseNumber);
-    const playButton = document.createElement("button");
-    const parsedMoves = parseAlgorithmMoves(algorithm);
-    const setName = activeSet;
 
-    card.className = "algorithm-case";
     heading.className = "algorithm-case-heading";
     title.textContent = formatAlgorithmTitle(activeSet, caseNumber, caseName);
     category.className = "algorithm-category";
     category.textContent = `${group} · ${groupCase}`;
     moves.textContent = algorithm.replace(/2'/g, "2");
+    heading.append(title, category);
+
+    const cube = renderCaseCube(pattern, caseNumber, setupMoves);
+    const playButton = document.createElement("button");
+    const parsedMoves = parseAlgorithmMoves(algorithm);
+    const setName = activeSet;
+
+    card.className = activeSet === "F2L" ? "algorithm-case f2l-drill" : "algorithm-case";
     playButton.className = "algorithm-play-button";
     playButton.type = "button";
     playButton.textContent = "Play";
@@ -793,6 +897,7 @@ function renderAlgorithms() {
     playButton.addEventListener("click", () => {
       openAlgorithmPlayer({
         pattern,
+        setupMoves,
         algorithm,
         moves: parsedMoves,
         setName,
@@ -803,12 +908,20 @@ function renderAlgorithms() {
         button: playButton
       });
     });
-    heading.append(title, category);
     card.append(heading, cube, moves, playButton);
+
+    if (activeSet === "F2L") {
+      const descriptionText = document.createElement("p");
+      descriptionText.className = "f2l-drill-description";
+      descriptionText.textContent = description;
+      card.append(descriptionText);
+    }
+
     algorithmPanel.append(card);
   });
 
-  algorithmCount.textContent = `${algorithms.length} of ${getAlgorithms().length} ${activeSet} algorithms`;
+  const entryType = activeSet === "F2L" ? "F2L triggers" : `${activeSet} algorithms`;
+  algorithmCount.textContent = `${algorithms.length} of ${getAlgorithms().length} ${entryType}`;
   if (algorithms.length === 0) {
     const emptyState = document.createElement("p");
     emptyState.className = "algorithm-empty";
