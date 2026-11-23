@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#11131a">
+  <title>Cube Timer</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="timer.js" defer></script>
+</head>
+<body>
+  <main class="app">
+    <header class="topbar">
+      <a class="brand" href="index.html" aria-label="Cube Timer home">
+        <span class="brand-mark" aria-hidden="true">C</span>
+        <span>Cube Timer</span>
+      </a>
+      <span class="keyboard-hint"><kbd>SPACE</kbd> to start and stop</span>
+    </header>
+
+    <section class="timer-card" aria-label="Speedcubing timer">
+      <div class="scramble-label">SCRAMBLE</div>
+      <p class="scramble" id="scramble" aria-live="polite"></p>
+      <button class="new-scramble" id="new-scramble" type="button">New scramble</button>
+
+      <div class="timer-area">
+        <p class="timer" id="timer" role="timer" aria-label="0 seconds">0.00</p>
+        <p class="timer-hint" id="timer-hint" aria-live="polite">Hold space, then release to start</p>
+        <button class="mobile-control" id="timer-button" type="button">Start timer</button>
+      </div>
+    </section>
+
+    <section class="solves-section" aria-labelledby="solves-heading">
+      <div class="section-heading">
+        <div>
+          <p class="eyebrow">YOUR SESSION</p>
+          <h1 id="solves-heading">Recent solves</h1>
+        </div>
+      </div>
+      <div class="averages" aria-label="Session averages">
+        <article class="average-card">
+          <span class="average-label">Ao5</span>
+          <strong class="average-time" id="ao5">--</strong>
+          <span class="average-detail">Latest 5 solves</span>
+        </article>
+        <article class="average-card">
+          <span class="average-label">Ao12</span>
+          <strong class="average-time" id="ao12">--</strong>
+          <span class="average-detail">Latest 12 solves</span>
+        </article>
+      </div>
+      <ol class="solves-list" id="solves-list" aria-live="polite">
+        <li class="empty-state">Your solve times will show up here.</li>
+      </ol>
+    </section>
+
+    <nav class="page-nav bottom-nav" aria-label="Main navigation">
+      <a class="nav-link is-current" href="index.html" aria-current="page">Timer</a>
+      <a class="nav-link" href="tutorial.html">CFOP guide</a>
+      <a class="nav-link" href="advanced.html">Advanced Method</a>
+    </nav>
+
+    <footer>Times are kept for this page session only.</footer>
+  </main>
+</body>
+</html>

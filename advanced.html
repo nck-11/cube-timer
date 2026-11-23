@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#11131a">
+  <title>Advanced Method | Cube Timer</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="algorithms.js" defer></script>
+</head>
+<body>
+  <main class="app guide-app">
+    <header class="topbar">
+      <a class="brand" href="index.html" aria-label="Cube Timer home">
+        <span class="brand-mark" aria-hidden="true">C</span>
+        <span>Cube Timer</span>
+      </a>
+    </header>
+
+    <section class="guide-hero">
+      <p class="eyebrow">3×3 SPEEDSOLVING</p>
+      <h1>Advanced Method</h1>
+      <p>Build on beginner CFOP with efficient F2L, full OLL, and full PLL. Learn to recognize cases before turning, choose algorithms that feel comfortable, and reduce pauses between steps.</p>
+      <a class="practice-link" href="#algorithm-library">Browse the algorithm library <span aria-hidden="true">↓</span></a>
+    </section>
+
+    <section class="guide-section" aria-labelledby="cfop-progression-heading">
+      <div class="guide-section-heading">
+        <p class="eyebrow">YOUR NEXT STEPS</p>
+        <h2 id="cfop-progression-heading">Progress from beginner CFOP</h2>
+      </div>
+      <div class="stage-grid">
+        <article class="stage-card">
+          <span class="stage-number">01</span>
+          <h3>Plan the cross</h3>
+          <p>Inspect the scramble and plan all four cross edges before starting. Practice solving the cross on the bottom without rotating the cube.</p>
+        </article>
+        <article class="stage-card">
+          <span class="stage-number">02</span>
+          <h3>Improve F2L</h3>
+          <p>Build corner-edge pairs intuitively. Reduce unnecessary rotations, use efficient inserts, and search for the next pair while finishing the current one.</p>
+        </article>
+        <article class="stage-card">
+          <span class="stage-number">03</span>
+          <h3>Learn full PLL</h3>
+          <p>PLL has 21 cases. Learn a few at a time, beginning with cases you see often, and drill recognition separately from execution.</p>
+        </article>
+        <article class="stage-card">
+          <span class="stage-number">04</span>
+          <h3>Learn full OLL</h3>
+          <p>OLL has 57 cases. Keep using two-look OLL while learning; add cases gradually and focus on recognizing the pattern from multiple angles.</p>
+        </article>
+      </div>
+    </section>
+
+    <section class="guide-section" aria-labelledby="algorithm-practice-heading">
+      <div class="guide-section-heading">
+        <p class="eyebrow">ALGORITHM TRAINING</p>
+        <h2 id="algorithm-practice-heading">Learn algorithms effectively</h2>
+      </div>
+      <ul class="shortcut-list">
+        <li><strong>Recognize first.</strong> Study the top stickers and side-color blocks before you start turning. Knowing the case early prevents pauses mid-algorithm.</li>
+        <li><strong>Choose comfortable finger tricks.</strong> If an algorithm causes repeated regrips, compare an alternate version and practice the one that flows naturally for you.</li>
+        <li><strong>Chunk the sequence.</strong> Break a long algorithm into short move groups, repeat each group smoothly, then join the groups together.</li>
+        <li><strong>Drill both recognition and execution.</strong> Mix the case with other cases so you learn to identify it, not just repeat it from a memorized setup.</li>
+        <li><strong>Track progress with the timer.</strong> Practice one case at a time, then return to full solves and watch for recognition pauses.</li>
+      </ul>
+    </section>
+
+    <section class="guide-section" id="algorithm-library" aria-labelledby="algorithm-library-heading">
+      <div class="guide-section-heading">
+        <p class="eyebrow">OFFLINE REFERENCE</p>
+        <h2 id="algorithm-library-heading">OLL &amp; PLL algorithms</h2>
+      </div>
+      <p class="section-intro">Browse all 57 OLL and 21 PLL cases. Choose a set, filter by case group, or search for a case name or move sequence. Select Play to watch the cube at Moderate or Slow speed; use the red arrows to step through moves and drag or use the arrow keys to rotate it.</p>
+      <div class="algorithm-controls">
+        <div class="algorithm-tabs" role="tablist" aria-label="Algorithm set">
+          <button class="algorithm-tab is-selected" id="oll-tab" type="button" role="tab" aria-selected="true" aria-controls="algorithm-panel" data-set="OLL">OLL <span>57</span></button>
+          <button class="algorithm-tab" id="pll-tab" type="button" role="tab" aria-selected="false" aria-controls="algorithm-panel" data-set="PLL" tabindex="-1">PLL <span>21</span></button>
+        </div>
+        <label class="algorithm-filter">Search algorithms
+          <input id="algorithm-search" type="search" placeholder="e.g. Sune, line, R U R'" autocomplete="off">
+        </label>
+        <label class="algorithm-filter">Case group
+          <select id="algorithm-group">
+            <option value="">All groups</option>
+          </select>
+        </label>
+      </div>
+      <p class="algorithm-count" id="algorithm-count" role="status" aria-live="polite"></p>
+      <div class="algorithm-cases" id="algorithm-panel" role="tabpanel" aria-labelledby="oll-tab"></div>
+      <p class="algorithm-caveat">These are common algorithm choices; variants exist. Check the case carefully before practicing, and use the move notation at the end of this page.</p>
+    </section>
+
+    <dialog class="algorithm-player" id="algorithm-player" aria-labelledby="algorithm-player-title" aria-describedby="algorithm-player-sequence">
+      <header class="algorithm-player-header">
+        <div>
+          <p class="eyebrow">ALGORITHM PLAYBACK</p>
+          <h2 id="algorithm-player-title"></h2>
+          <p class="algorithm-player-category" id="algorithm-player-category"></p>
+        </div>
+        <button class="algorithm-player-close" id="algorithm-player-close" type="button" aria-label="Close playback">&times;</button>
+      </header>
+      <div class="algorithm-player-cube" id="algorithm-player-cube" role="group" tabindex="0" aria-label="Interactive cube. Drag or use the arrow keys to rotate."></div>
+      <div class="algorithm-player-sequence-row" role="group" aria-label="Algorithm step controls">
+        <button class="algorithm-step-button algorithm-step-button--previous" id="algorithm-previous-step" type="button" aria-label="Play previous move" title="Previous move" disabled></button>
+        <code class="algorithm-player-sequence" id="algorithm-player-sequence" aria-label="Algorithm move sequence."></code>
+        <button class="algorithm-step-button algorithm-step-button--next" id="algorithm-next-step" type="button" aria-label="Play next move" title="Next move" disabled></button>
+      </div>
+      <p class="algorithm-player-status" id="algorithm-player-status" aria-live="polite"></p>
+      <div class="algorithm-player-speed" role="group" aria-label="Playback speed">
+        <button class="algorithm-speed-option is-selected" type="button" data-playback-speed="moderate" aria-pressed="true">Moderate</button>
+        <button class="algorithm-speed-option" type="button" data-playback-speed="slow" aria-pressed="false">Slow</button>
+      </div>
+      <button class="algorithm-player-action" id="algorithm-player-action" type="button">Play</button>
+    </dialog>
+
+    <section class="guide-section notation-section" aria-labelledby="advanced-notation-heading">
+      <div class="guide-section-heading">
+        <p class="eyebrow">ALGORITHM NOTATION</p>
+        <h2 id="advanced-notation-heading">Reading algorithm moves</h2>
+      </div>
+      <p>Uppercase face letters turn one face clockwise when viewed directly. A prime (<code>'</code>) reverses a turn, and <code>2</code> means a half turn. Lowercase face letters turn that face and its middle slice together; <strong>M</strong> turns the middle slice between L and R. Lowercase <strong>x</strong>, <strong>y</strong>, and <strong>z</strong> rotate the whole cube.</p>
+      <div class="notation-examples">
+        <p><kbd>R</kbd> Turn the right face</p>
+        <p><kbd>R'</kbd> Turn the right face backward</p>
+        <p><kbd>R2</kbd> Turn the right face halfway</p>
+        <p><kbd>r</kbd> Wide right turn</p>
+        <p><kbd>M</kbd> Middle slice turn</p>
+        <p><kbd>x</kbd> Whole-cube rotation like R</p>
+        <p><kbd>y</kbd> Whole-cube rotation like U</p>
+        <p><kbd>z</kbd> Whole-cube rotation like F</p>
+      </div>
+    </section>
+
+    <nav class="page-nav bottom-nav" aria-label="Main navigation">
+      <a class="nav-link" href="index.html">Timer</a>
+      <a class="nav-link" href="tutorial.html">CFOP guide</a>
+      <a class="nav-link is-current" href="advanced.html" aria-current="page">Advanced Method</a>
+    </nav>
+  </main>
+</body>
+</html>

@@ -1,0 +1,180 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#11131a">
+  <title>CFOP Guide | Cube Timer</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main class="app guide-app">
+    <header class="topbar">
+      <a class="brand" href="index.html" aria-label="Cube Timer home">
+        <span class="brand-mark" aria-hidden="true">C</span>
+        <span>Cube Timer</span>
+      </a>
+    </header>
+
+    <section class="guide-hero">
+      <p class="eyebrow">3×3 SPEEDSOLVING</p>
+      <h1>Learn CFOP</h1>
+      <p>CFOP solves the cube in four stages: Cross, F2L, OLL, and PLL. Learn the ideas first, then build speed with efficient turns and better lookahead.</p>
+      <a class="practice-link" href="index.html">Practice with the timer <span aria-hidden="true">→</span></a>
+    </section>
+
+    <section class="guide-section" aria-labelledby="stages-heading">
+      <div class="guide-section-heading">
+        <p class="eyebrow">THE METHOD</p>
+        <h2 id="stages-heading">The four stages</h2>
+      </div>
+      <div class="stage-grid">
+        <article class="stage-card">
+          <span class="stage-number">01</span>
+          <h3>Cross</h3>
+          <p>Match the four edge pieces around one center, including their side colors. Solve the cross on the bottom so you can see the rest of the puzzle.</p>
+          <p class="stage-tip"><strong>Shortcut:</strong> Plan the whole cross during inspection, then try to solve it without rotating the cube.</p>
+        </article>
+        <article class="stage-card">
+          <span class="stage-number">02</span>
+          <h3>F2L</h3>
+          <p>Pair each first-layer corner with its matching middle-layer edge, then insert the pair into its slot. Repeat for all four slots.</p>
+          <p class="stage-tip"><strong>Shortcut:</strong> Learn intuitive pair building before memorizing lots of cases. While inserting one pair, look for the next.</p>
+        </article>
+        <article class="stage-card">
+          <span class="stage-number">03</span>
+          <h3>OLL</h3>
+          <p>Orient the last-layer pieces so the top face is one color. You can start with two-look OLL: orient the edges, then orient the corners.</p>
+          <p class="stage-tip"><strong>Shortcut:</strong> Learn two-look OLL first; expand to full OLL as you get comfortable recognizing cases.</p>
+        </article>
+        <article class="stage-card">
+          <span class="stage-number">04</span>
+          <h3>PLL</h3>
+          <p>Move the last-layer pieces into their correct positions while keeping the top face oriented. Two-look PLL solves corners first, then edges.</p>
+          <p class="stage-tip"><strong>Shortcut:</strong> Learn two-look PLL first, then add full PLL cases gradually and practice recognizing them before turning.</p>
+        </article>
+      </div>
+    </section>
+
+    <section class="guide-section how-to-section" aria-labelledby="f2l-howto-heading">
+      <div class="guide-section-heading">
+        <p class="eyebrow">STEP-BY-STEP</p>
+        <h2 id="f2l-howto-heading">How to solve F2L</h2>
+      </div>
+      <p class="section-intro">Keep your cross on the bottom. F2L is four repeats of the same idea: pair one corner with its matching edge, then insert that pair into its slot.</p>
+      <ol class="how-to-list">
+        <li><strong>Choose an open slot.</strong> Look at the two center colors beside it. Find the corner with those colors and the cross color, then find the edge with the same two side colors.</li>
+        <li><strong>Bring both pieces to the top layer.</strong> Use U turns and small setup moves. If a target piece is trapped in the slot, take it out without disturbing the rest of the solved cross.</li>
+        <li><strong>Pair the pieces above their slot.</strong> Match their side colors and join the corner and edge while keeping the cross intact. The exact setup depends on which stickers face up or out.</li>
+        <li><strong>Insert the pair.</strong> Turn the pair over its matching slot and use a short insertion. Repeat for the other three slots; avoid rotating the whole cube when a U turn will do.</li>
+      </ol>
+      <div class="algorithm-note">
+        <strong>Useful triggers to practice</strong>
+        <p><code>R U R'</code> and <code>U' L' U L</code> are common right- and left-side triggers. They are building blocks, not one-size-fits-all F2L solutions—the setup depends on the case.</p>
+      </div>
+    </section>
+
+    <section class="guide-section how-to-section" aria-labelledby="oll-howto-heading">
+      <div class="guide-section-heading">
+        <p class="eyebrow">LAST LAYER · STEP 1</p>
+        <h2 id="oll-howto-heading">How to solve OLL</h2>
+      </div>
+      <p class="section-intro">With the first two layers solved, make the top face all one color. A beginner-friendly route is two-look OLL: orient the top edges, then orient the top corners.</p>
+      <ol class="how-to-list">
+        <li><strong>Orient the edges.</strong> Look only at the four top edges. Use U turns to line up the pattern, then use the matching edge-orientation algorithm. The line case should be held horizontally.</li>
+        <li><strong>Orient the corners.</strong> Keep the top color facing up and identify the corner pattern. Learn Sune and anti-Sune first; use U turns to set up a case, apply the matching sequence, and check the top again.</li>
+        <li><strong>Confirm the top face.</strong> All four top edges and all four top corners should show the top color. The side colors may still be out of order—that is what PLL fixes.</li>
+      </ol>
+      <div class="algorithm-grid">
+        <article class="algorithm-card">
+          <strong>Edge line</strong>
+          <code>F R U R' U' F'</code>
+          <span>Hold the top-layer line horizontally.</span>
+        </article>
+        <article class="algorithm-card">
+          <strong>Sune</strong>
+          <code>R U R' U R U2 R'</code>
+          <span>A common corner-orientation case.</span>
+        </article>
+        <article class="algorithm-card">
+          <strong>Anti-Sune</strong>
+          <code>R U2 R' U' R U' R'</code>
+          <span>The opposite Sune corner pattern.</span>
+        </article>
+      </div>
+      <p class="algorithm-caveat">These are starter cases, not the complete OLL set. Learn the case recognition and setup for each algorithm; do not apply one sequence to every pattern.</p>
+    </section>
+
+    <section class="guide-section how-to-section" aria-labelledby="pll-howto-heading">
+      <div class="guide-section-heading">
+        <p class="eyebrow">LAST LAYER · STEP 2</p>
+        <h2 id="pll-howto-heading">How to solve PLL</h2>
+      </div>
+      <p class="section-intro">Once the top face is oriented, permute the last-layer pieces so each side color matches its center. In two-look PLL, solve corners first, then edges.</p>
+      <ol class="how-to-list">
+        <li><strong>Permute the corners.</strong> Use the side colors to spot a correctly placed corner or a matching pair. Turn U to set up the case, then use the matching A-perm direction to cycle the corners.</li>
+        <li><strong>Permute the edges.</strong> When the corners match their centers, check whether the top edges need a clockwise or counterclockwise cycle. Set up with U and use the matching U-perm.</li>
+        <li><strong>Align the top layer.</strong> Finish with a U turn if needed. Every side should now be a single color.</li>
+      </ol>
+      <div class="algorithm-grid">
+        <article class="algorithm-card">
+          <strong>Aa-perm · corners</strong>
+          <code>x R' U R' D2 R U' R' D2 R2 x'</code>
+          <span>Cycles three corners one way.</span>
+        </article>
+        <article class="algorithm-card">
+          <strong>Ab-perm · corners</strong>
+          <code>x R2 D2 R U R' D2 R U' R x'</code>
+          <span>Cycles three corners the other way.</span>
+        </article>
+        <article class="algorithm-card">
+          <strong>Ua-perm · edges</strong>
+          <code>R U' R U R U R U' R' U' R2</code>
+          <span>Cycles the top edges one way.</span>
+        </article>
+        <article class="algorithm-card">
+          <strong>Ub-perm · edges</strong>
+          <code>R2 U R U R' U' R' U' R' U R'</code>
+          <span>Cycles the top edges the other way.</span>
+        </article>
+      </div>
+      <p class="algorithm-caveat">These are starter PLL algorithms. Use the case pattern and U setup to choose a direction; the listed sequences are not interchangeable for every last-layer pattern.</p>
+    </section>
+
+    <section class="guide-section" aria-labelledby="shortcuts-heading">
+      <div class="guide-section-heading">
+        <p class="eyebrow">BUILD BETTER HABITS</p>
+        <h2 id="shortcuts-heading">Speed shortcuts</h2>
+      </div>
+      <ul class="shortcut-list">
+        <li><strong>Reduce pauses.</strong> Turn at a steady pace and use F2L to search for your next pair while the current pair is going in.</li>
+        <li><strong>Keep the cube steady.</strong> Prefer finger tricks and efficient solutions over unnecessary whole-cube rotations or regrips.</li>
+        <li><strong>Practice one stage at a time.</strong> Slow solves focused on cross planning or F2L lookahead build better habits than rushing every solve.</li>
+        <li><strong>Learn algorithms in steps.</strong> Get comfortable with two-look OLL and PLL before taking on the full sets.</li>
+      </ul>
+    </section>
+
+    <section class="guide-section notation-section" aria-labelledby="notation-heading">
+      <div class="guide-section-heading">
+        <p class="eyebrow">READING MOVES</p>
+        <h2 id="notation-heading">Basic notation</h2>
+      </div>
+      <p>Letters name the face you turn, viewed straight on: <strong>R</strong> right, <strong>L</strong> left, <strong>U</strong> up, <strong>D</strong> down, <strong>F</strong> front, and <strong>B</strong> back.</p>
+      <div class="notation-examples">
+        <p><kbd>R</kbd> Turn the right face clockwise</p>
+        <p><kbd>R'</kbd> Turn the right face counterclockwise</p>
+        <p><kbd>R2</kbd> Turn the right face 180°</p>
+        <p><kbd>x</kbd> Rotate the whole cube like an R turn</p>
+        <p><kbd>y</kbd> Rotate the whole cube like a U turn</p>
+        <p><kbd>z</kbd> Rotate the whole cube like an F turn</p>
+      </div>
+    </section>
+
+    <nav class="page-nav bottom-nav" aria-label="Main navigation">
+      <a class="nav-link" href="index.html">Timer</a>
+      <a class="nav-link is-current" href="tutorial.html" aria-current="page">CFOP guide</a>
+      <a class="nav-link" href="advanced.html">Advanced Method</a>
+    </nav>
+  </main>
+</body>
+</html>
