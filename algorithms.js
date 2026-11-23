@@ -113,72 +113,60 @@ const algorithmSets = {
       "y2 (R U R') y' (R2 u' R) U' (R' U R') u R2"
     ] }
   ],
+  // F2L entries are case setups; getAlgorithms derives the solving sequence.
   F2L: [
-    { group: "Right slot", algorithms: [
-      {
-        name: "Right insertion",
-        algorithm: "R U R'",
-        description: "A familiar right-hand trigger used while pairing or inserting pieces into the front-right slot."
-      },
-      {
-        name: "Right trigger with U setup",
-        algorithm: "U R U' R'",
-        description: "Adds a U-layer alignment before working the front-right slot."
-      },
-      {
-        name: "Right trigger with U' setup",
-        algorithm: "U' R U R'",
-        description: "An alternate U-layer alignment before working the front-right slot."
-      },
-      {
-        name: "Right trigger with U2 setup",
-        algorithm: "U2 R U R'",
-        description: "Uses a half-turn alignment before the right-hand trigger."
-      }
+    { group: "Free pairs", algorithms: [
+      "F R' F' R",
+      "R' F R F'",
+      "F' U F",
+      "R U' R'"
     ] },
-    { group: "Left slot", algorithms: [
-      {
-        name: "Left insertion",
-        algorithm: "L' U' L",
-        description: "A familiar left-hand trigger used while pairing or inserting pieces into the front-left slot."
-      },
-      {
-        name: "Left trigger with U' setup",
-        algorithm: "U' L' U L",
-        description: "Adds a U-layer alignment before working the front-left slot."
-      },
-      {
-        name: "Left trigger with U setup",
-        algorithm: "U L' U' L",
-        description: "An alternate U-layer alignment before working the front-left slot."
-      },
-      {
-        name: "Left trigger with U2 setup",
-        algorithm: "U2 L' U' L",
-        description: "Uses a half-turn alignment before the left-hand trigger."
-      }
+    { group: "Disconnected pairs", algorithms: [
+      "R U R' U2 R U' R' U",
+      "F' U' F U2 F' U F U'",
+      "R U R' U2 R U2 R' U",
+      "r' U' R2 U' R2 U2 r",
+      "F' U F U' R U R' U",
+      "R U' R' U' R U' R' U",
+      "R U R' U' R U2 R' U'",
+      "R U R' U' R U2 R' F R' F' R2 U R' U",
+      "R U' R' U2 R U R'",
+      "F' L' U2 L F"
     ] },
-    { group: "Front and back triggers", algorithms: [
-      {
-        name: "Front trigger, left",
-        algorithm: "F' U' F",
-        description: "A front-face trigger for working with pieces near the front-left side."
-      },
-      {
-        name: "Front trigger, right",
-        algorithm: "F U F'",
-        description: "The reverse front-face trigger for repositioning a pair near the front."
-      },
-      {
-        name: "Back trigger, right",
-        algorithm: "B U B'",
-        description: "A back-face trigger for working with pieces near the back-right side."
-      },
-      {
-        name: "Back trigger, left",
-        algorithm: "B' U' B",
-        description: "The reverse back-face trigger for repositioning a pair near the back."
-      }
+    { group: "Connected pairs", algorithms: [
+      "F' U F U' R U2 R' U",
+      "R U R' U2 R U R' U' R U R'",
+      "r U2 R' U R U' R' U M",
+      "R U' R' U' R U R' U",
+      "R U R' U' R U R' U2 R U' R'",
+      "F' U F U2 R U R'",
+      "R U' R' U R U2 R'",
+      "R U R' U' R U R' F R' F' R",
+      "R U' R' U R U' R' U2 R U' R'",
+      "R U R' F R U R' U' F'"
+    ] },
+    { group: "Corner in slot", algorithms: [
+      "F' R U R' U' R' F R",
+      "F' U' F U R U R' U'",
+      "R U R' U' R U R'",
+      "R' F R F' U R U' R'",
+      "F R' F' R F R' F' R",
+      "R U' R' U R U' R'"
+    ] },
+    { group: "Edge in slot", algorithms: [
+      "R U R' F R' F' R U",
+      "R U' R' U R U' R' U R U' R'",
+      "R U R' U2 R U R' U",
+      "R U' R' U2 R U' R' U'",
+      "F' U F U' R U' R' U",
+      "R U' R' U2 F R' F' R U2"
+    ] },
+    { group: "Pieces in slot", algorithms: [
+      "R U' R U2 F R2 F' U2 R2",
+      "R U' R' U R U2 R' U R U' R'",
+      "R U' R' U' R U R' U2 R U' R'",
+      "R U R' F U R U' R' F' R U R'",
+      "R F U R U' R' F' U' R'"
     ] }
   ]
 };
@@ -342,20 +330,16 @@ function getAlgorithms() {
     algorithms.map((entry, groupIndex) => {
       const currentCaseNumber = ++caseNumber;
       const isF2L = activeSet === "F2L";
-      const algorithm = isF2L ? entry.algorithm : entry;
+      const setup = isF2L ? entry : "";
+      const algorithm = isF2L ? invertAlgorithm(setup) : entry;
       return {
         algorithm,
         caseNumber: currentCaseNumber,
-        caseName: activeSet === "PLL"
-          ? pllCaseNames[currentCaseNumber - 1]
-          : isF2L
-            ? entry.name
-            : "",
-        description: isF2L ? entry.description : "",
+        caseName: activeSet === "PLL" ? pllCaseNames[currentCaseNumber - 1] : "",
         group,
         groupCase: groupIndex + 1,
         pattern: isF2L ? solvedF2LPattern : casePatterns[activeSet][group][groupIndex],
-        setupMoves: isF2L ? parseAlgorithmMoves(invertAlgorithm(algorithm)) : []
+        setupMoves: isF2L ? parseAlgorithmMoves(setup) : []
       };
     })
   );
@@ -374,7 +358,7 @@ function renderCaseCube(pattern, caseNumber, setupMoves = []) {
     const cube = document.createElement("div");
     cube.className = "case-cube case-cube--playback";
     cube.setAttribute("role", "img");
-    cube.setAttribute("aria-label", `F2L trigger ${caseNumber} starting cube`);
+    cube.setAttribute("aria-label", `F2L case ${caseNumber} starting cube`);
     cube.append(createPlaybackCube(pattern, setupMoves).model);
     return cube;
   }
@@ -867,7 +851,7 @@ function renderAlgorithms() {
   });
 
   algorithmPanel.replaceChildren();
-  algorithms.forEach(({ algorithm, caseNumber, caseName, description, group, groupCase, pattern, setupMoves }) => {
+  algorithms.forEach(({ algorithm, caseNumber, caseName, group, groupCase, pattern, setupMoves }) => {
     const card = document.createElement("article");
     const heading = document.createElement("div");
     const title = document.createElement("strong");
@@ -910,17 +894,10 @@ function renderAlgorithms() {
     });
     card.append(heading, cube, moves, playButton);
 
-    if (activeSet === "F2L") {
-      const descriptionText = document.createElement("p");
-      descriptionText.className = "f2l-drill-description";
-      descriptionText.textContent = description;
-      card.append(descriptionText);
-    }
-
     algorithmPanel.append(card);
   });
 
-  const entryType = activeSet === "F2L" ? "F2L triggers" : `${activeSet} algorithms`;
+  const entryType = activeSet === "F2L" ? "F2L cases" : `${activeSet} algorithms`;
   algorithmCount.textContent = `${algorithms.length} of ${getAlgorithms().length} ${entryType}`;
   if (algorithms.length === 0) {
     const emptyState = document.createElement("p");

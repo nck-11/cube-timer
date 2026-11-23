@@ -690,18 +690,9 @@ h1 {
   grid-template-areas:
     "heading heading"
     "cube moves"
-    "cube play"
-    "description description";
+    "cube play";
   align-items: center;
   gap: 8px;
-}
-
-.f2l-drill-description {
-  grid-area: description;
-  margin: 0;
-  color: #aeb1bf;
-  font-size: 12px;
-  line-height: 1.55;
 }
 
 .algorithm-case-heading {
