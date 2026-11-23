@@ -61,16 +61,12 @@ button {
   text-decoration: none;
 }
 
-.brand-mark {
-  display: grid;
+.brand-logo {
+  display: block;
   width: 34px;
   height: 34px;
-  place-items: center;
-  border-radius: 10px;
-  background: #9273ff;
-  color: #11131a;
-  font-size: 20px;
-  font-weight: 900;
+  flex: 0 0 34px;
+  object-fit: contain;
 }
 
 .nav-link,
@@ -1338,10 +1334,27 @@ a:focus-visible {
 }
 
 .timer-titlebar {
+  position: relative;
   display: flex;
   min-height: 48px;
   align-items: center;
   justify-content: center;
+}
+
+.timer-brand {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  display: block;
+  width: 34px;
+  height: 34px;
+  transform: translateY(-50%);
+}
+
+.timer-brand:focus-visible {
+  border-radius: 8px;
+  outline: 2px solid #9273ff;
+  outline-offset: 3px;
 }
 
 .timer-titlebar h1 {
