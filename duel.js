@@ -26,6 +26,7 @@ const copyCodeButton = document.querySelector("#copy-duel-code");
 const participantStoragePrefix = "cube-duel-participant:";
 const faces = ["R", "L", "U", "D", "F", "B"];
 const modifiers = ["", "'", "2"];
+const touchInput = window.matchMedia("(pointer: coarse)").matches;
 const supabase =
   supabaseConfig.url && supabaseConfig.publishableKey
     ? createClient(supabaseConfig.url, supabaseConfig.publishableKey)
@@ -38,11 +39,10 @@ let duelState = null;
 let pollTimer = null;
 let timerStart = 0;
 let timerFrame = 0;
-let isTiming = false;
+let timerState = "idle";
 let isSubmitting = false;
 let pendingTime = null;
 let spaceArmingTimer = 0;
-let spaceArmed = false;
 let spaceButtonTarget = null;
 
 function setNotice(message, isError = false) {
@@ -187,12 +187,72 @@ function renderResults() {
   }
 }
 
+function renderTimerControls() {
+  const isMyTurn = canSolve();
+  const timerAvailable = duelState?.status === "active" && isMyTurn;
+  const playerName =
+    duelState?.activePlayer === 1
+      ? duelState.player1Name
+      : duelState?.player2Name;
+
+  timerDisplay.hidden = !timerAvailable;
+  timerButton.hidden = !timerAvailable;
+  timerButton.disabled = !timerAvailable || isSubmitting;
+  timerDisplay.classList.toggle("is-arming", timerState === "arming");
+  timerDisplay.classList.toggle("is-armed", timerState === "armed");
+
+  if (!duelState || duelState.status === "waiting") {
+    timerHint.textContent = "Share the room code with your opponent.";
+  } else if (duelState.status === "finished") {
+    timerHint.textContent = "The final result is saved in this room.";
+  } else if (isSubmitting) {
+    timerHint.textContent = "Submitting your time to the duel.";
+  } else if (pendingTime !== null) {
+    timerHint.textContent = "Your solve is ready to retry.";
+  } else if (timerState === "arming") {
+    timerHint.textContent = "Keep holding…";
+  } else if (timerState === "armed") {
+    timerHint.textContent = "Release to start";
+  } else if (timerState === "running") {
+    timerHint.textContent = touchInput
+      ? "Tap Stop to finish"
+      : "Press Space or tap to stop";
+  } else if (isMyTurn) {
+    timerHint.textContent = touchInput
+      ? "Tap Start to begin, tap Stop to finish"
+      : "Hold Space, then release to start";
+  } else {
+    timerHint.textContent = `Waiting for ${playerName} to solve.`;
+  }
+
+  timerButton.textContent = isSubmitting
+    ? "Saving solve…"
+    : pendingTime !== null
+      ? "Retry submit"
+      : timerState === "running"
+        ? "Stop solve"
+        : timerState === "arming"
+          ? "Keep holding…"
+          : timerState === "armed"
+            ? "Release to start"
+        : "Start solve";
+}
+
 function renderDuel() {
   if (!duelState || !participant) return;
 
   const code = duelState.code;
   const currentRound = duelState.roundNumber;
   const isMyTurn = canSolve();
+
+  if (
+    (duelState.status !== "active" || !isMyTurn) &&
+    (timerState === "arming" || timerState === "armed")
+  ) {
+    window.clearTimeout(spaceArmingTimer);
+    spaceArmingTimer = 0;
+    setTimerState("idle");
+  }
 
   lobby.hidden = true;
   room.hidden = false;
@@ -203,8 +263,7 @@ function renderDuel() {
     matchStatus.textContent = "Waiting for a second player to join.";
     roundLabel.textContent = "Ready when both players have joined";
     scrambleDisplay.textContent = "The shared scrambles will appear when the duel starts.";
-    timerHint.textContent = "Share the room code with your opponent.";
-    timerButton.disabled = true;
+    renderTimerControls();
     return;
   }
 
@@ -212,8 +271,7 @@ function renderDuel() {
     matchStatus.textContent = "Duel complete.";
     roundLabel.textContent = "All five scrambles are done";
     scrambleDisplay.textContent = "Compare your trimmed Ao5 averages below.";
-    timerHint.textContent = "The final result is saved in this room.";
-    timerButton.disabled = true;
+    renderTimerControls();
     return;
   }
 
@@ -233,23 +291,7 @@ function renderDuel() {
     : `Waiting for ${playerName} to solve.`;
   roundLabel.textContent = `Scramble ${currentRound} of 5 · ${firstName} goes first`;
   scrambleDisplay.textContent = nextScramble;
-  timerHint.textContent = isSubmitting
-    ? "Submitting your time to the duel."
-    : pendingTime !== null
-      ? "Your solve is ready to retry."
-      : isTiming
-        ? "Press Space or tap to finish."
-        : isMyTurn
-          ? "Press Space or tap the button to start, then stop when finished."
-          : `Waiting for ${playerName}.`;
-  timerButton.disabled = !isMyTurn || isSubmitting;
-  timerButton.textContent = isSubmitting
-    ? "Saving solve…"
-    : pendingTime !== null
-      ? "Retry submit"
-      : isTiming
-        ? "Stop solve"
-        : "Start solve";
+  renderTimerControls();
 }
 
 async function refreshDuel() {
@@ -282,8 +324,25 @@ function showParticipant(nextParticipant) {
     .catch((error) => setNotice(error.message || "Could not open the duel.", true));
 }
 
+function setTimerState(nextState) {
+  const previousState = timerState;
+  timerState = nextState;
+  timerDisplay.classList.toggle("is-arming", timerState === "arming");
+  timerDisplay.classList.toggle("is-armed", timerState === "armed");
+
+  if (timerState === "armed") {
+    timerDisplay.textContent = "Ready";
+    timerDisplay.setAttribute("aria-label", "Ready to start");
+  } else if (previousState === "armed") {
+    timerDisplay.textContent = "0.000";
+    timerDisplay.setAttribute("aria-label", "0 seconds");
+  }
+
+  renderTimerControls();
+}
+
 function updateTimer() {
-  if (!isTiming) return;
+  if (timerState !== "running") return;
   const elapsed = performance.now() - timerStart;
   timerDisplay.textContent = (elapsed / 1000).toFixed(3);
   timerDisplay.setAttribute("aria-label", `${timerDisplay.textContent} seconds`);
@@ -291,13 +350,13 @@ function updateTimer() {
 }
 
 async function stopTimer() {
-  if (!isTiming || !participant) return;
+  if (timerState !== "running" || !participant) return;
 
-  isTiming = false;
   cancelAnimationFrame(timerFrame);
   pendingTime = Math.max(1, Math.round(performance.now() - timerStart));
   timerDisplay.textContent = (pendingTime / 1000).toFixed(3);
   timerDisplay.setAttribute("aria-label", `${timerDisplay.textContent} seconds`);
+  setTimerState("idle");
   await submitPendingTime();
 }
 
@@ -305,9 +364,7 @@ async function submitPendingTime() {
   if (!participant || pendingTime === null) return;
 
   isSubmitting = true;
-  timerButton.disabled = true;
-  timerButton.textContent = "Saving solve…";
-  timerHint.textContent = "Submitting your time to the duel.";
+  renderTimerControls();
 
   try {
     const { data, error } = await supabase.rpc("duel_submit_time", {
@@ -319,6 +376,8 @@ async function submitPendingTime() {
 
     pendingTime = null;
     isSubmitting = false;
+    timerDisplay.textContent = "0.000";
+    timerDisplay.setAttribute("aria-label", "0 seconds");
     duelState = data;
     renderDuel();
   } catch (error) {
@@ -338,18 +397,17 @@ function toggleTimer() {
     return;
   }
 
-  if (isTiming) {
+  if (timerState === "running") {
     stopTimer().catch((error) => {
       setNotice(error.message || "Could not save your solve.", true);
     });
     return;
   }
 
-  isTiming = true;
+  if (timerState !== "idle") return;
+
   timerStart = performance.now();
-  timerButton.textContent = "Stop solve";
-  timerButton.disabled = false;
-  timerHint.textContent = "Press Space or tap to finish.";
+  setTimerState("running");
   updateTimer();
 }
 
@@ -419,19 +477,23 @@ function handleSpaceDown(event) {
     event.preventDefault();
     if (event.repeat) return;
     spaceButtonTarget = target;
-    return;
   }
 
   event.preventDefault();
-  if (event.repeat || !canSolve()) return;
+  if (event.repeat || !canSolve() || pendingTime !== null) return;
 
-  if (isTiming) {
+  if (timerState === "running") {
     toggleTimer();
     return;
   }
 
+  if (timerState !== "idle") return;
+
+  setTimerState("arming");
   spaceArmingTimer = window.setTimeout(() => {
-    spaceArmed = true;
+    spaceArmingTimer = 0;
+    if (!canSolve() || timerState !== "arming") return;
+    setTimerState("armed");
   }, 300);
 }
 
@@ -440,8 +502,16 @@ function handleSpaceUp(event) {
 
   if (spaceButtonTarget) {
     event.preventDefault();
-    spaceButtonTarget.click();
     spaceButtonTarget = null;
+    window.clearTimeout(spaceArmingTimer);
+    spaceArmingTimer = 0;
+    if (timerState === "armed") {
+      timerStart = performance.now();
+      setTimerState("running");
+      updateTimer();
+    } else if (timerState === "arming") {
+      setTimerState("idle");
+    }
     return;
   }
 
@@ -456,8 +526,14 @@ function handleSpaceUp(event) {
 
   event.preventDefault();
   window.clearTimeout(spaceArmingTimer);
-  if (spaceArmed) toggleTimer();
-  spaceArmed = false;
+  spaceArmingTimer = 0;
+  if (timerState === "armed") {
+    timerStart = performance.now();
+    setTimerState("running");
+    updateTimer();
+  } else if (timerState === "arming") {
+    setTimerState("idle");
+  }
 }
 
 createForm.addEventListener("submit", createDuel);
@@ -467,8 +543,11 @@ document.addEventListener("keydown", handleSpaceDown);
 document.addEventListener("keyup", handleSpaceUp);
 window.addEventListener("blur", () => {
   window.clearTimeout(spaceArmingTimer);
-  spaceArmed = false;
+  spaceArmingTimer = 0;
   spaceButtonTarget = null;
+  if (timerState === "arming" || timerState === "armed") {
+    setTimerState("idle");
+  }
 });
 
 copyCodeButton.addEventListener("click", async () => {
