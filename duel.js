@@ -18,6 +18,7 @@ const matchStatus = document.querySelector("#duel-match-status");
 const roundLabel = document.querySelector("#duel-round-label");
 const scrambleDisplay = document.querySelector("#duel-scramble");
 const timerDisplay = document.querySelector("#duel-timer");
+const timerFocus = document.querySelector(".duel-screen .timer-focus");
 const cubePreview = document.querySelector("#duel-cube-preview");
 const cubeFaceElements = {
   up: document.querySelector(".duel-cube-preview .cube-up"),
@@ -60,6 +61,8 @@ let renderedCubeScramble = "";
 let isJoiningPublicRoom = false;
 let spaceArmingTimer = 0;
 let spaceButtonTarget = null;
+let touchPointer = null;
+let ignoreTouchClick = false;
 
 function setNotice(message, isError = false) {
   notice.textContent = message;
@@ -304,7 +307,7 @@ function renderTimerControls() {
       : "Press Space or tap to stop";
   } else if (isMyTurn) {
     timerHint.textContent = touchInput
-      ? "Tap Start to begin, tap Stop to finish"
+      ? "Hold to get ready, release to start"
       : "Hold Space, then release to start";
   } else {
     timerHint.textContent = `Waiting for ${playerName} to solve.`;
@@ -336,6 +339,7 @@ function renderDuel() {
   ) {
     window.clearTimeout(spaceArmingTimer);
     spaceArmingTimer = 0;
+    touchPointer = null;
     setTimerState("idle");
   }
 
@@ -706,6 +710,66 @@ function handleSpaceUp(event) {
   }
 }
 
+timerFocus.addEventListener("pointerdown", (event) => {
+  if (event.pointerType !== "touch" || !event.isPrimary) {
+    ignoreTouchClick = false;
+    return;
+  }
+  if (!canSolve() || isSubmitting || pendingTime !== null) return;
+
+  ignoreTouchClick = false;
+  touchPointer = {
+    id: event.pointerId,
+    action: timerState === "running" ? "stop" : timerState === "idle" ? "start" : null,
+    buttonTarget: timerButton.contains(event.target)
+  };
+
+  if (touchPointer.action === "stop") {
+    stopTimer().catch((error) => {
+      setNotice(error.message || "Could not save your solve.", true);
+    });
+    ignoreTouchClick = touchPointer.buttonTarget;
+  } else if (touchPointer.action === "start") {
+    setTimerState("arming");
+    spaceArmingTimer = window.setTimeout(() => {
+      spaceArmingTimer = 0;
+      if (!canSolve() || timerState !== "arming") return;
+      setTimerState("armed");
+    }, 300);
+  }
+});
+
+window.addEventListener("pointerup", (event) => {
+  if (!touchPointer || touchPointer.id !== event.pointerId) return;
+
+  if (touchPointer.action === "start") {
+    window.clearTimeout(spaceArmingTimer);
+    spaceArmingTimer = 0;
+    if (timerState === "armed" && canSolve() && !isSubmitting) {
+      timerStart = performance.now();
+      setTimerState("running");
+      updateTimer();
+    } else if (timerState === "arming") {
+      setTimerState("idle");
+    }
+  }
+
+  ignoreTouchClick = touchPointer.buttonTarget;
+  touchPointer = null;
+});
+
+window.addEventListener("pointercancel", (event) => {
+  if (!touchPointer || touchPointer.id !== event.pointerId) return;
+
+  window.clearTimeout(spaceArmingTimer);
+  spaceArmingTimer = 0;
+  if (timerState === "arming" || timerState === "armed") {
+    setTimerState("idle");
+  }
+  touchPointer = null;
+  ignoreTouchClick = false;
+});
+
 createForm.addEventListener("submit", createDuel);
 publicCreateForm.addEventListener("submit", (event) => createDuel(event, true));
 joinForm.addEventListener("submit", joinDuel);
@@ -716,13 +780,21 @@ publicRoomList.addEventListener("click", (event) => {
   if (!joinButton || !publicRoomList.contains(joinButton)) return;
   joinPublicDuel(joinButton.dataset.roomId, joinButton);
 });
-timerButton.addEventListener("click", toggleTimer);
+timerButton.addEventListener("click", (event) => {
+  if (ignoreTouchClick && event.detail > 0) {
+    ignoreTouchClick = false;
+    return;
+  }
+  toggleTimer();
+});
 document.addEventListener("keydown", handleSpaceDown);
 document.addEventListener("keyup", handleSpaceUp);
 window.addEventListener("blur", () => {
   window.clearTimeout(spaceArmingTimer);
   spaceArmingTimer = 0;
   spaceButtonTarget = null;
+  touchPointer = null;
+  ignoreTouchClick = false;
   if (timerState === "arming" || timerState === "armed") {
     setTimerState("idle");
   }

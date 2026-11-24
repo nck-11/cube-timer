@@ -382,3 +382,5 @@ grant execute on function public.duel_list_public_rooms() to anon, authenticated
 grant execute on function public.duel_join_public(uuid, text, text) to anon, authenticated;
 grant execute on function public.duel_get_state(text, text) to anon, authenticated;
 grant execute on function public.duel_submit_time(text, text, integer) to anon, authenticated;
+
+notify pgrst, 'reload schema';
