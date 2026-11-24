@@ -15,6 +15,7 @@ const solveCountDisplay = document.querySelector("#solve-count");
 const sessionTabs = [...document.querySelectorAll(".timer-side-tab")];
 const sessionPanels = [...document.querySelectorAll(".timer-tab-panel")];
 const touchInput = window.matchMedia("(pointer: coarse)").matches;
+const solvesStorageKey = "cube-timer-solves";
 const cubeFaceElements = {
   up: document.querySelector(".cube-up"),
   left: document.querySelector(".cube-left"),
@@ -50,7 +51,7 @@ const cubeFaceByDirection = {
   "0,-1,0": "up",
   "0,1,0": "down"
 };
-const solves = [];
+const solves = loadSolves();
 let state = "idle";
 let startTime = 0;
 let touchPointer = null;
@@ -59,6 +60,38 @@ let currentScramble = "";
 let activeScramble = "";
 let armTimeout;
 let animationFrame;
+let spaceButtonTarget = null;
+
+function loadSolves() {
+  try {
+    const savedSolves = localStorage.getItem(solvesStorageKey);
+    if (savedSolves === null) return [];
+
+    const parsedSolves = JSON.parse(savedSolves);
+    if (!Array.isArray(parsedSolves)) {
+      throw new TypeError("Saved solves must be an array.");
+    }
+
+    return parsedSolves.filter(
+      (solve) =>
+        solve &&
+        Number.isFinite(solve.time) &&
+        solve.time >= 0 &&
+        typeof solve.scramble === "string"
+    );
+  } catch (error) {
+    console.error("Could not load saved solve times.", error);
+    return [];
+  }
+}
+
+function saveSolves() {
+  try {
+    localStorage.setItem(solvesStorageKey, JSON.stringify(solves));
+  } catch (error) {
+    console.error("Could not save solve times.", error);
+  }
+}
 
 function makeScramble() {
   const scramble = [];
@@ -299,6 +332,7 @@ function renderSolves() {
     deleteButton.setAttribute("aria-label", `Delete solve ${solves.length - index}`);
     deleteButton.addEventListener("click", () => {
       solves.splice(index, 1);
+      saveSolves();
       renderSolves();
     });
     actions.append(result, deleteButton);
@@ -351,13 +385,24 @@ function stopTimer(time = performance.now()) {
   timerDisplay.textContent = formatTime(elapsed);
   timerDisplay.setAttribute("aria-label", `${formatTime(elapsed)} seconds`);
   solves.unshift({ time: elapsed, scramble: activeScramble });
+  saveSolves();
   setTimerState("idle");
   renderSolves();
 }
 
 function handleSpaceDown(event) {
-  if (event.code !== "Space" || event.repeat || event.target instanceof HTMLButtonElement) return;
+  if (event.code !== "Space") return;
+
+  if (event.target instanceof HTMLButtonElement) {
+    if (event.target !== timerButton) return;
+    event.preventDefault();
+    if (event.repeat) return;
+    spaceButtonTarget = event.target;
+    return;
+  }
+
   event.preventDefault();
+  if (event.repeat) return;
 
   if (state === "running") {
     stopTimer();
@@ -371,7 +416,16 @@ function handleSpaceDown(event) {
 }
 
 function handleSpaceUp(event) {
-  if (event.code !== "Space" || event.target instanceof HTMLButtonElement) return;
+  if (event.code !== "Space") return;
+
+  if (spaceButtonTarget) {
+    event.preventDefault();
+    spaceButtonTarget.click();
+    spaceButtonTarget = null;
+    return;
+  }
+
+  if (event.target instanceof HTMLButtonElement) return;
   event.preventDefault();
   window.clearTimeout(armTimeout);
 
@@ -383,6 +437,7 @@ document.addEventListener("keydown", handleSpaceDown);
 document.addEventListener("keyup", handleSpaceUp);
 window.addEventListener("blur", () => {
   window.clearTimeout(armTimeout);
+  spaceButtonTarget = null;
   if (state === "arming" || state === "armed") setTimerState("idle");
 });
 
