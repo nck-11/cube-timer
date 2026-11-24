@@ -300,7 +300,9 @@ function renderTimerControls() {
   } else if (timerState === "arming") {
     timerHint.textContent = "Keep holding…";
   } else if (timerState === "armed") {
-    timerHint.textContent = "Release to start";
+    timerHint.textContent = touchInput
+      ? "Ready to start — release to begin"
+      : "Release to start";
   } else if (timerState === "running") {
     timerHint.textContent = touchInput
       ? "Tap Stop to finish"
@@ -323,7 +325,9 @@ function renderTimerControls() {
           ? "Keep holding…"
           : timerState === "armed"
             ? "Release to start"
-        : "Start solve";
+            : touchInput
+              ? "Hold to start"
+              : "Start solve";
 }
 
 function renderDuel() {
