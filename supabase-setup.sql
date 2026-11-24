@@ -12,11 +12,15 @@ create table if not exists public.duels (
   player2_secret_hash text check (player2_secret_hash is null or player2_secret_hash ~ '^[0-9a-f]{64}$'),
   scrambles text[] not null check (cardinality(scrambles) = 5),
   turn_index smallint not null default 0 check (turn_index between 0 and 10),
+  quit_by smallint check (quit_by in (1, 2)),
   created_at timestamptz not null default now()
 );
 
 alter table public.duels
   add column if not exists is_public boolean not null default false;
+
+alter table public.duels
+  add column if not exists quit_by smallint check (quit_by in (1, 2));
 
 create index if not exists duels_open_public_rooms_idx
   on public.duels (created_at desc)
@@ -31,9 +35,23 @@ create table if not exists public.duel_results (
   primary key (duel_id, round_number, player_number)
 );
 
+create table if not exists public.duel_join_requests (
+  id uuid primary key default gen_random_uuid(),
+  duel_id uuid not null references public.duels(id) on delete cascade,
+  player_name text not null check (char_length(player_name) between 1 and 20),
+  player_secret_hash text not null check (player_secret_hash ~ '^[0-9a-f]{64}$'),
+  status text not null default 'pending' check (status in ('pending', 'accepted', 'declined')),
+  created_at timestamptz not null default now()
+);
+
+create index if not exists duel_join_requests_pending_idx
+  on public.duel_join_requests (duel_id, created_at)
+  where status = 'pending';
+
 alter table public.duels enable row level security;
 alter table public.duel_results enable row level security;
-revoke all on public.duels, public.duel_results from anon, authenticated;
+alter table public.duel_join_requests enable row level security;
+revoke all on public.duels, public.duel_results, public.duel_join_requests from anon, authenticated;
 
 create or replace function public.duel_create(
   p_player_name text,
@@ -204,20 +222,24 @@ as $$
   ) as public_rooms;
 $$;
 
-create or replace function public.duel_join_public(
+drop function if exists public.duel_join_public(uuid, text, text);
+
+create or replace function public.duel_request_public_join(
   p_room_id uuid,
   p_player_name text,
   p_secret_hash text
 )
-returns text
+returns uuid
 language plpgsql
 security definer
 set search_path = public, pg_temp
 as $$
 declare
-  v_code text;
+  v_duel public.duels%rowtype;
+  v_request_id uuid;
 begin
-  if p_player_name is null
+  if p_room_id is null
+    or p_player_name is null
     or char_length(trim(p_player_name)) not between 1 and 20
     or p_secret_hash is null
     or p_secret_hash !~ '^[0-9a-f]{64}$'
@@ -225,22 +247,216 @@ begin
     raise exception 'Invalid player details.';
   end if;
 
-  update public.duels
-  set
-    player2_name = trim(p_player_name),
-    player2_secret_hash = p_secret_hash,
-    status = 'active'
+  select *
+  into v_duel
+  from public.duels
   where id = p_room_id
     and is_public
     and status = 'waiting'
     and player2_secret_hash is null
-  returning code into v_code;
+  for update;
 
   if not found then
-    raise exception 'Public room not found or already full.';
+    raise exception 'Public room is not accepting join requests.';
   end if;
 
-  return v_code;
+  if v_duel.player1_secret_hash = p_secret_hash then
+    raise exception 'You cannot request to join your own room.';
+  end if;
+
+  select id
+  into v_request_id
+  from public.duel_join_requests
+  where duel_id = p_room_id
+    and player_secret_hash = p_secret_hash
+    and status = 'pending';
+
+  if found then
+    return v_request_id;
+  end if;
+
+  insert into public.duel_join_requests (
+    duel_id,
+    player_name,
+    player_secret_hash
+  )
+  values (
+    p_room_id,
+    trim(p_player_name),
+    p_secret_hash
+  )
+  returning id into v_request_id;
+
+  return v_request_id;
+end;
+$$;
+
+create or replace function public.duel_list_public_join_requests(
+  p_room_id uuid,
+  p_host_secret_hash text
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+declare
+  v_requests jsonb;
+begin
+  if p_room_id is null
+    or p_host_secret_hash is null
+    or p_host_secret_hash !~ '^[0-9a-f]{64}$'
+    or not exists (
+      select 1
+      from public.duels
+      where id = p_room_id
+        and is_public
+        and status = 'waiting'
+        and player2_secret_hash is null
+        and player1_secret_hash = p_host_secret_hash
+    )
+  then
+    raise exception 'Public room not found or host key is invalid.';
+  end if;
+
+  select coalesce(
+    jsonb_agg(
+      jsonb_build_object(
+        'id', id,
+        'playerName', player_name
+      ) order by created_at
+    ),
+    '[]'::jsonb
+  )
+  into v_requests
+  from public.duel_join_requests
+  where duel_id = p_room_id
+    and status = 'pending';
+
+  return v_requests;
+end;
+$$;
+
+create or replace function public.duel_respond_public_join(
+  p_room_id uuid,
+  p_request_id uuid,
+  p_host_secret_hash text,
+  p_accept boolean
+)
+returns boolean
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+declare
+  v_duel public.duels%rowtype;
+  v_request public.duel_join_requests%rowtype;
+begin
+  if p_room_id is null
+    or p_request_id is null
+    or p_host_secret_hash is null
+    or p_host_secret_hash !~ '^[0-9a-f]{64}$'
+    or p_accept is null
+  then
+    raise exception 'Invalid public-room response.';
+  end if;
+
+  select *
+  into v_duel
+  from public.duels
+  where id = p_room_id
+  for update;
+
+  if not found
+    or not v_duel.is_public
+    or v_duel.status <> 'waiting'
+    or v_duel.player2_secret_hash is not null
+    or v_duel.player1_secret_hash <> p_host_secret_hash
+  then
+    raise exception 'Public room not found or host key is invalid.';
+  end if;
+
+  select *
+  into v_request
+  from public.duel_join_requests
+  where id = p_request_id
+    and duel_id = p_room_id
+    and status = 'pending'
+  for update;
+
+  if not found then
+    raise exception 'Join request is no longer pending.';
+  end if;
+
+  if p_accept then
+    update public.duels
+    set
+      player2_name = v_request.player_name,
+      player2_secret_hash = v_request.player_secret_hash,
+      status = 'active'
+    where id = p_room_id
+      and status = 'waiting'
+      and player2_secret_hash is null;
+
+    if not found then
+      raise exception 'Public room is no longer available.';
+    end if;
+
+    update public.duel_join_requests
+    set status = case when id = p_request_id then 'accepted' else 'declined' end
+    where duel_id = p_room_id
+      and status = 'pending';
+  else
+    update public.duel_join_requests
+    set status = 'declined'
+    where id = p_request_id;
+  end if;
+
+  return true;
+end;
+$$;
+
+create or replace function public.duel_get_public_join_request(
+  p_request_id uuid,
+  p_secret_hash text
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+declare
+  v_request public.duel_join_requests%rowtype;
+  v_code text;
+begin
+  if p_request_id is null
+    or p_secret_hash is null
+    or p_secret_hash !~ '^[0-9a-f]{64}$'
+  then
+    raise exception 'Invalid join-request key.';
+  end if;
+
+  select *
+  into v_request
+  from public.duel_join_requests
+  where id = p_request_id
+    and player_secret_hash = p_secret_hash;
+
+  if not found then
+    raise exception 'Join request not found or participant key is invalid.';
+  end if;
+
+  if v_request.status = 'accepted' then
+    select code
+    into v_code
+    from public.duels
+    where id = v_request.duel_id;
+  end if;
+
+  return jsonb_build_object(
+    'status', v_request.status,
+    'code', v_code
+  );
 end;
 $$;
 
@@ -289,6 +505,7 @@ begin
         when mod(v_duel.turn_index, 4) in (0, 3) then 1
         else 2
       end,
+    'quitBy', v_duel.quit_by,
     'results', coalesce(
       (
         select jsonb_agg(
@@ -367,20 +584,84 @@ begin
 end;
 $$;
 
+create or replace function public.duel_quit(
+  p_code text,
+  p_secret_hash text
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+declare
+  v_duel public.duels%rowtype;
+  v_player_number smallint;
+begin
+  if p_secret_hash is null or p_secret_hash !~ '^[0-9a-f]{64}$' then
+    raise exception 'Participant key is invalid.';
+  end if;
+
+  select *
+  into v_duel
+  from public.duels
+  where code = upper(trim(p_code))
+  for update;
+
+  if not found then
+    raise exception 'Duel not found or participant key is invalid.';
+  end if;
+
+  if v_duel.player1_secret_hash = p_secret_hash then
+    v_player_number := 1;
+  elsif v_duel.player2_secret_hash = p_secret_hash then
+    v_player_number := 2;
+  else
+    raise exception 'Duel not found or participant key is invalid.';
+  end if;
+
+  if v_duel.status not in ('waiting', 'active') then
+    raise exception 'This duel has already ended.';
+  end if;
+
+  update public.duels
+  set
+    status = 'finished',
+    quit_by = v_player_number
+  where id = v_duel.id;
+
+  if v_duel.is_public then
+    update public.duel_join_requests
+    set status = 'declined'
+    where duel_id = v_duel.id
+      and status = 'pending';
+  end if;
+
+  return public.duel_get_state(v_duel.code, p_secret_hash);
+end;
+$$;
+
 revoke all on function public.duel_create(text, text[], text) from public;
 revoke all on function public.duel_create_public(text, text[], text) from public;
 revoke all on function public.duel_join(text, text, text) from public;
 revoke all on function public.duel_list_public_rooms() from public;
-revoke all on function public.duel_join_public(uuid, text, text) from public;
+revoke all on function public.duel_request_public_join(uuid, text, text) from public;
+revoke all on function public.duel_list_public_join_requests(uuid, text) from public;
+revoke all on function public.duel_respond_public_join(uuid, uuid, text, boolean) from public;
+revoke all on function public.duel_get_public_join_request(uuid, text) from public;
 revoke all on function public.duel_get_state(text, text) from public;
 revoke all on function public.duel_submit_time(text, text, integer) from public;
+revoke all on function public.duel_quit(text, text) from public;
 
 grant execute on function public.duel_create(text, text[], text) to anon, authenticated;
 grant execute on function public.duel_create_public(text, text[], text) to anon, authenticated;
 grant execute on function public.duel_join(text, text, text) to anon, authenticated;
 grant execute on function public.duel_list_public_rooms() to anon, authenticated;
-grant execute on function public.duel_join_public(uuid, text, text) to anon, authenticated;
+grant execute on function public.duel_request_public_join(uuid, text, text) to anon, authenticated;
+grant execute on function public.duel_list_public_join_requests(uuid, text) to anon, authenticated;
+grant execute on function public.duel_respond_public_join(uuid, uuid, text, boolean) to anon, authenticated;
+grant execute on function public.duel_get_public_join_request(uuid, text) to anon, authenticated;
 grant execute on function public.duel_get_state(text, text) to anon, authenticated;
 grant execute on function public.duel_submit_time(text, text, integer) to anon, authenticated;
+grant execute on function public.duel_quit(text, text) to anon, authenticated;
 
 notify pgrst, 'reload schema';

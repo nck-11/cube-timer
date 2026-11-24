@@ -27,12 +27,12 @@
       </section>
 
       <p class="duel-notice" id="duel-notice" role="status" aria-live="polite"></p>
-      <p class="duel-setup-note">Online matches need a Supabase project. Run <a href="supabase-setup.sql">the setup SQL</a>, then add the project URL and publishable key to <code>supabase-config.js</code>.</p>
+      <p class="duel-setup-note">Online matches need Supabase. Run <a href="supabase-setup.sql">the setup SQL</a> and add the project URL and publishable key to <code>supabase-config.js</code>. Re-run the SQL after schema updates.</p>
 
       <section class="duel-public-lobby" aria-label="Public duels">
         <form class="duel-card" id="create-public-duel-form">
           <h2>Create a public duel</h2>
-          <p>Open a room that appears in the public list for anyone to join.</p>
+          <p>Open a room in the public list, then accept or decline join requests.</p>
           <label for="public-player-name">Your username</label>
           <input id="public-player-name" name="username" maxlength="20" autocomplete="nickname" required>
           <button class="duel-primary-button" type="submit">Open public room</button>
@@ -46,11 +46,21 @@
             </div>
             <button class="duel-secondary-button duel-refresh-rooms" id="refresh-public-rooms" type="button" aria-label="Refresh public rooms" title="Refresh public rooms">Refresh</button>
           </div>
-          <p class="duel-public-rooms-intro">Choose an open room to join its player.</p>
+          <p class="duel-public-rooms-intro">Request to join an open room and wait for its host to respond.</p>
           <div class="duel-public-room-list" id="public-room-list" role="list">
             <p class="duel-public-empty">Loading public rooms…</p>
           </div>
         </section>
+      </section>
+
+      <section class="duel-join-requests" id="duel-join-requests" aria-labelledby="duel-join-requests-heading" hidden>
+        <div class="guide-section-heading">
+          <p class="eyebrow">YOUR PUBLIC ROOM</p>
+          <h2 id="duel-join-requests-heading">Join requests</h2>
+        </div>
+        <p class="duel-join-requests-status" id="duel-join-requests-status" role="status" aria-live="polite"></p>
+        <button class="duel-secondary-button duel-close-public-room" id="close-public-room" type="button" hidden>Close public room</button>
+        <div class="duel-join-request-list" id="duel-join-request-list" role="list"></div>
       </section>
 
       <section class="duel-private-section" aria-labelledby="private-duel-heading">
@@ -126,6 +136,7 @@
         <section class="duel-status">
           <p class="duel-match-status" id="duel-match-status" aria-live="polite"></p>
           <p class="duel-round-label" id="duel-round-label">Waiting for opponent</p>
+          <button class="duel-secondary-button duel-quit-button" id="quit-duel" type="button" title="Ends the match for both players" hidden>Quit duel</button>
         </section>
         <section class="duel-results" aria-labelledby="duel-results-heading">
           <div class="guide-section-heading">

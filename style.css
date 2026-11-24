@@ -1984,6 +1984,97 @@ a:focus-visible {
   margin-top: 18px;
 }
 
+.duel-status .duel-quit-button {
+  display: block;
+  width: min(100%, 220px);
+  margin: 12px auto 0;
+  border-color: #70444a;
+  color: #ffb4ba;
+}
+
+.duel-join-requests {
+  flex: 0 0 auto;
+  padding: 18px;
+  border: 1px solid #30323e;
+  border-radius: 16px;
+  background: rgb(25 27 36 / 92%);
+}
+
+.duel-join-requests .guide-section-heading {
+  margin-bottom: 10px;
+}
+
+.duel-join-requests .guide-section-heading h2 {
+  margin: 0;
+  font-size: 16px;
+}
+
+.duel-join-requests-status {
+  margin: 0;
+  color: #aeb1bf;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.duel-join-requests-status.is-error {
+  color: #ff9aa1;
+}
+
+.duel-join-requests .duel-close-public-room {
+  width: auto;
+  margin-top: 14px;
+  border-color: #70444a;
+  color: #ffb4ba;
+}
+
+.duel-join-request-list {
+  display: grid;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.duel-join-request {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px;
+  border: 1px solid #363846;
+  border-radius: 10px;
+  background: #171922;
+}
+
+.duel-join-request-name {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  color: #f3f4f8;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.duel-join-request-actions {
+  display: flex;
+  flex: 0 0 auto;
+  gap: 7px;
+}
+
+.duel-join-request-actions .duel-primary-button,
+.duel-join-request-actions .duel-secondary-button {
+  min-height: 34px;
+  padding: 6px 10px;
+  font-size: 11px;
+}
+
+.duel-join-request-actions .duel-primary-button {
+  border-color: #3a9b70;
+  background: #225d43;
+  color: #f2fff8;
+}
+
+.duel-join-request-actions .duel-secondary-button {
+  border-color: #5a454a;
+}
+
 .duel-results .guide-section-heading {
   margin-bottom: 12px;
 }
@@ -2203,6 +2294,23 @@ a:focus-visible {
     padding-top: 18px;
   }
 
+  .duel-join-request {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .duel-join-request-actions {
+    display: grid;
+    width: 100%;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .duel-join-request-actions button {
+    min-width: 0;
+    padding-right: 6px;
+    padding-left: 6px;
+  }
+
   .duel-screen {
     padding-top: 12px;
   }
@@ -2245,6 +2353,12 @@ a:focus-visible {
 
   .duel-cube-preview {
     padding-top: 6px;
+  }
+}
+
+@media (max-width: 360px) {
+  .duel-join-request-actions {
+    grid-template-columns: 1fr;
   }
 }
 
