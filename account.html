@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#11131a">
+  <title>Account | Cube Timer</title>
+  <link rel="icon" type="image/svg+xml" href="logo.svg">
+  <link rel="stylesheet" href="style.css">
+  <script type="module" src="account.js"></script>
+</head>
+<body>
+  <main class="app guide-app account-app">
+    <header class="topbar">
+      <a class="brand" href="index.html" aria-label="Cube Timer home">
+        <img class="brand-logo" src="logo.svg" alt="">
+        <span>Cube Timer</span>
+      </a>
+    </header>
+
+    <section class="guide-hero account-hero">
+      <p class="eyebrow">YOUR CUBE TIMER ACCOUNT</p>
+      <h1>Sign in or create an account</h1>
+      <p>Use your email to sign in on this device. You can still use the timer without an account.</p>
+    </section>
+
+    <p class="duel-notice account-notice" id="account-notice" role="status" aria-live="polite"></p>
+
+    <section class="duel-card account-card" aria-label="Email account">
+      <div class="account-session" id="account-session" hidden>
+        <p class="eyebrow">SIGNED IN</p>
+        <p class="account-email" id="account-email"></p>
+        <p>Your solve times are saved on this device and browser.</p>
+        <button class="duel-secondary-button" id="sign-out" type="button">Sign out</button>
+      </div>
+
+      <div id="account-auth">
+        <div class="account-mode-tabs" role="group" aria-label="Account action">
+          <button class="duel-secondary-button is-selected" id="sign-in-mode" type="button" aria-pressed="true">Log in</button>
+          <button class="duel-secondary-button" id="sign-up-mode" type="button" aria-pressed="false">Sign up</button>
+        </div>
+
+        <h2 id="account-form-heading">Log in</h2>
+        <p id="account-form-description">Enter your email and password to continue.</p>
+
+        <form id="account-form">
+          <label for="account-email-input">Email</label>
+          <input id="account-email-input" name="email" type="email" autocomplete="email" maxlength="254" required>
+
+          <label id="account-password-label" for="account-password">Password</label>
+          <input id="account-password" name="password" type="password" autocomplete="current-password" minlength="8" required>
+
+          <button class="duel-primary-button" id="account-submit" type="submit">Log in</button>
+        </form>
+
+        <div class="account-form-links">
+          <button class="account-text-button" id="forgot-password" type="button">Forgot password?</button>
+          <button class="account-text-button" id="back-to-login" type="button" hidden>Back to log in</button>
+        </div>
+      </div>
+    </section>
+
+    <nav class="page-nav bottom-nav" aria-label="Main navigation">
+      <a class="nav-link" href="index.html">Timer</a>
+      <a class="nav-link" href="advanced.html">ALGS</a>
+      <a class="nav-link" href="duel.html">Duel</a>
+      <a class="nav-link is-current" href="account.html" aria-current="page">Account</a>
+    </nav>
+  </main>
+</body>
+</html>
