@@ -22,6 +22,9 @@ alter table public.duels
 alter table public.duels
   add column if not exists quit_by smallint check (quit_by in (1, 2));
 
+alter table public.duels
+  add column if not exists public_host_last_seen_at timestamptz not null default now();
+
 create index if not exists duels_open_public_rooms_idx
   on public.duels (created_at desc)
   where is_public and status = 'waiting' and player2_secret_hash is null;
@@ -198,28 +201,61 @@ $$;
 
 create or replace function public.duel_list_public_rooms()
 returns jsonb
-language sql
+language plpgsql
 security definer
 set search_path = public, pg_temp
 as $$
-  select coalesce(
-    jsonb_agg(
-      jsonb_build_object(
-        'id', public_rooms.id,
-        'player1Name', public_rooms.player1_name
-      ) order by public_rooms.created_at desc
-    ),
-    '[]'::jsonb
-  )
-  from (
-    select id, player1_name, created_at
-    from public.duels
-    where is_public
-      and status = 'waiting'
-      and player2_secret_hash is null
-    order by created_at desc
-    limit 25
-  ) as public_rooms;
+begin
+  return (
+    select coalesce(
+      jsonb_agg(
+        jsonb_build_object(
+          'id', public_rooms.id,
+          'player1Name', public_rooms.player1_name
+        ) order by public_rooms.created_at desc
+      ),
+      '[]'::jsonb
+    )
+    from (
+      select id, player1_name, created_at
+      from public.duels
+      where is_public
+        and status = 'waiting'
+        and player2_secret_hash is null
+        and public_host_last_seen_at >= now() - interval '60 seconds'
+      order by created_at desc
+      limit 25
+    ) as public_rooms
+  );
+end;
+$$;
+
+create or replace function public.duel_public_room_heartbeat(
+  p_room_id uuid,
+  p_host_secret_hash text
+)
+returns boolean
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+begin
+  if p_host_secret_hash is null
+    or p_host_secret_hash !~ '^[0-9a-f]{64}$'
+  then
+    raise exception 'Participant key is invalid.';
+  end if;
+
+  update public.duels
+  set public_host_last_seen_at = now()
+  where id = p_room_id
+    and is_public
+    and status = 'waiting'
+    and player2_secret_hash is null
+    and player1_secret_hash = p_host_secret_hash;
+
+  return found;
+end;
 $$;
 
 drop function if exists public.duel_join_public(uuid, text, text);
@@ -644,6 +680,7 @@ revoke all on function public.duel_create(text, text[], text) from public;
 revoke all on function public.duel_create_public(text, text[], text) from public;
 revoke all on function public.duel_join(text, text, text) from public;
 revoke all on function public.duel_list_public_rooms() from public;
+revoke all on function public.duel_public_room_heartbeat(uuid, text) from public;
 revoke all on function public.duel_request_public_join(uuid, text, text) from public;
 revoke all on function public.duel_list_public_join_requests(uuid, text) from public;
 revoke all on function public.duel_respond_public_join(uuid, uuid, text, boolean) from public;
@@ -656,6 +693,7 @@ grant execute on function public.duel_create(text, text[], text) to anon, authen
 grant execute on function public.duel_create_public(text, text[], text) to anon, authenticated;
 grant execute on function public.duel_join(text, text, text) to anon, authenticated;
 grant execute on function public.duel_list_public_rooms() to anon, authenticated;
+grant execute on function public.duel_public_room_heartbeat(uuid, text) to anon, authenticated;
 grant execute on function public.duel_request_public_join(uuid, text, text) to anon, authenticated;
 grant execute on function public.duel_list_public_join_requests(uuid, text) to anon, authenticated;
 grant execute on function public.duel_respond_public_join(uuid, uuid, text, boolean) to anon, authenticated;

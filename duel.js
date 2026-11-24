@@ -70,6 +70,8 @@ let spaceArmingTimer = 0;
 let spaceButtonTarget = null;
 let touchPointer = null;
 let ignoreTouchClick = false;
+let publicRoomHeartbeatTimer = 0;
+let isSendingPublicRoomHeartbeat = false;
 let pendingPublicJoin = null;
 let publicJoinRequests = [];
 let publicJoinPollTimer = 0;
@@ -681,7 +683,64 @@ async function refreshDuel() {
 
   duelState = data;
   renderDuel();
+  syncPublicRoomHeartbeat();
   await refreshPublicJoinRequests();
+}
+
+function syncPublicRoomHeartbeat() {
+  const shouldHeartbeat =
+    participant?.isPublic === true &&
+    participant.playerNumber === 1 &&
+    duelState?.status === "waiting";
+
+  if (!shouldHeartbeat) {
+    window.clearInterval(publicRoomHeartbeatTimer);
+    publicRoomHeartbeatTimer = 0;
+    return;
+  }
+  if (publicRoomHeartbeatTimer) return;
+
+  sendPublicRoomHeartbeat();
+  publicRoomHeartbeatTimer = window.setInterval(
+    sendPublicRoomHeartbeat,
+    15000
+  );
+}
+
+async function sendPublicRoomHeartbeat() {
+  if (
+    isSendingPublicRoomHeartbeat ||
+    participant?.isPublic !== true ||
+    participant.playerNumber !== 1 ||
+    duelState?.status !== "waiting" ||
+    isQuittingDuel ||
+    !supabase
+  ) {
+    return;
+  }
+
+  isSendingPublicRoomHeartbeat = true;
+  try {
+    const { data, error } = await supabase.rpc(
+      "duel_public_room_heartbeat",
+      {
+        p_room_id: participant.publicRoomId,
+        p_host_secret_hash: await hashSecret(participant.secret)
+      }
+    );
+    if (error) throw error;
+    if (data !== true) {
+      window.clearInterval(publicRoomHeartbeatTimer);
+      publicRoomHeartbeatTimer = 0;
+    }
+  } catch (error) {
+    setNotice(
+      error.message || "Could not keep the public room active.",
+      true
+    );
+  } finally {
+    isSendingPublicRoomHeartbeat = false;
+  }
 }
 
 function startPolling() {
@@ -766,6 +825,7 @@ async function quitDuel() {
 
     participant = null;
     duelState = null;
+    syncPublicRoomHeartbeat();
     lobby.hidden = false;
     room.hidden = true;
     publicCreateForm.hidden = false;
