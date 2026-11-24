@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" class="timer-page">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -7,99 +7,160 @@
   <title>Duel 3x3 | Cube Timer</title>
   <link rel="icon" type="image/svg+xml" href="logo.svg">
   <link rel="stylesheet" href="style.css">
+  <script src="cube-preview.js"></script>
   <script type="module" src="duel.js"></script>
 </head>
 <body>
-  <main class="app guide-app duel-app">
-    <header class="topbar">
-      <a class="brand" href="index.html" aria-label="Cube Timer home">
-        <img class="brand-logo" src="logo.svg" alt="">
-        <span>Cube Timer</span>
-      </a>
-    </header>
-
-    <section class="guide-hero duel-hero">
-      <p class="eyebrow">ONLINE HEAD-TO-HEAD</p>
-      <h1>Duel 3x3</h1>
-      <p>Challenge another cuber on the same five scrambles. Take turns, then compare your trimmed Ao5 averages.</p>
-    </section>
-
-    <p class="duel-notice" id="duel-notice" role="status" aria-live="polite"></p>
-    <p class="duel-setup-note">Online matches need a Supabase project. Run <a href="supabase-setup.sql">the setup SQL</a>, then add the project URL and publishable key to <code>supabase-config.js</code>.</p>
-
-    <section class="duel-lobby" id="duel-lobby" aria-label="Create or join a duel">
-      <form class="duel-card" id="create-duel-form">
-        <h2>Create a duel</h2>
-        <p>Get a room code and invite your opponent.</p>
-        <label for="create-name">Your username</label>
-        <input id="create-name" name="username" maxlength="20" autocomplete="nickname" required>
-        <button class="duel-primary-button" type="submit">Create duel</button>
-      </form>
-
-      <form class="duel-card" id="join-duel-form">
-        <h2>Join a duel</h2>
-        <p>Enter your opponent's room code.</p>
-        <label for="join-name">Your username</label>
-        <input id="join-name" name="username" maxlength="20" autocomplete="nickname" required>
-        <label for="duel-code-input">Room code</label>
-        <input id="duel-code-input" name="code" maxlength="6" pattern="[A-Fa-f0-9]{6}" autocomplete="off" required>
-        <button class="duel-secondary-button" type="submit">Join duel</button>
-      </form>
-    </section>
-
-    <section class="duel-room" id="duel-room" aria-label="Duel match" hidden>
-      <header class="duel-room-heading">
-        <div>
-          <p class="eyebrow">ROOM CODE</p>
-          <p class="duel-room-code" id="duel-room-code">------</p>
-        </div>
-        <button class="duel-secondary-button duel-copy-button" id="copy-duel-code" type="button">Copy code</button>
+  <main class="app timer-app duel-app">
+    <section class="duel-lobby-view" id="duel-lobby" aria-label="Duel lobby">
+      <header class="topbar">
+        <a class="brand" href="index.html" aria-label="Cube Timer home">
+          <img class="brand-logo" src="logo.svg" alt="">
+          <span>Cube Timer</span>
+        </a>
       </header>
-      <p class="duel-match-status" id="duel-match-status" aria-live="polite"></p>
 
-      <section class="duel-play-area" aria-label="Current solve">
-        <p class="duel-round-label" id="duel-round-label">Waiting for opponent</p>
-        <p class="duel-scramble" id="duel-scramble">Your five shared scrambles will appear here.</p>
-        <p class="duel-timer" id="duel-timer" role="timer" aria-label="0 seconds">0.000</p>
-        <p class="duel-timer-hint" id="duel-timer-hint">Share the room code with a second player to begin.</p>
-        <button class="duel-primary-button duel-timer-button" id="duel-timer-button" type="button" disabled>Start solve</button>
+      <section class="guide-hero duel-hero">
+        <p class="eyebrow">ONLINE HEAD-TO-HEAD</p>
+        <h1>Duel 3x3</h1>
+        <p>Challenge another cuber on the same five scrambles. Take turns, then compare your trimmed Ao5 averages.</p>
       </section>
 
-      <section class="duel-results" aria-labelledby="duel-results-heading">
-        <div class="guide-section-heading">
-          <p class="eyebrow">SAME SCRAMBLES · ALTERNATING START</p>
-          <h2 id="duel-results-heading">Best of 5</h2>
+      <p class="duel-notice" id="duel-notice" role="status" aria-live="polite"></p>
+      <p class="duel-setup-note">Online matches need a Supabase project. Run <a href="supabase-setup.sql">the setup SQL</a>, then add the project URL and publishable key to <code>supabase-config.js</code>.</p>
+
+      <section class="duel-public-lobby" aria-label="Public duels">
+        <form class="duel-card" id="create-public-duel-form">
+          <h2>Create a public duel</h2>
+          <p>Open a room that appears in the public list for anyone to join.</p>
+          <label for="public-player-name">Your username</label>
+          <input id="public-player-name" name="username" maxlength="20" autocomplete="nickname" required>
+          <button class="duel-primary-button" type="submit">Open public room</button>
+        </form>
+
+        <section class="duel-card duel-public-rooms" aria-labelledby="public-rooms-heading">
+          <div class="duel-public-rooms-heading">
+            <div>
+              <p class="eyebrow">JOIN WITHOUT A CODE</p>
+              <h2 id="public-rooms-heading">Active public rooms</h2>
+            </div>
+            <button class="duel-secondary-button duel-refresh-rooms" id="refresh-public-rooms" type="button" aria-label="Refresh public rooms" title="Refresh public rooms">Refresh</button>
+          </div>
+          <p class="duel-public-rooms-intro">Choose an open room to join its player.</p>
+          <div class="duel-public-room-list" id="public-room-list" role="list">
+            <p class="duel-public-empty">Loading public rooms…</p>
+          </div>
+        </section>
+      </section>
+
+      <section class="duel-private-section" aria-labelledby="private-duel-heading">
+        <div class="duel-private-heading">
+          <p class="eyebrow">INVITE-ONLY</p>
+          <h2 id="private-duel-heading">Private duels</h2>
+          <p>Private rooms stay code-only. Share the room code directly with your opponent.</p>
         </div>
-        <div class="duel-table-wrap">
-          <table class="duel-table">
-            <thead>
-              <tr>
-                <th scope="col">Round</th>
-                <th scope="col" id="duel-player-one-heading">Player 1</th>
-                <th scope="col" id="duel-player-two-heading">Player 2</th>
-              </tr>
-            </thead>
-            <tbody id="duel-results-body"></tbody>
-            <tfoot>
-              <tr>
-                <th scope="row">Ao5</th>
-                <td id="duel-player-one-average">--</td>
-                <td id="duel-player-two-average">--</td>
-              </tr>
-            </tfoot>
-          </table>
-        </div>
-        <p class="duel-winner" id="duel-winner" aria-live="polite"></p>
+
+        <section class="duel-lobby" aria-label="Create or join a private duel">
+          <form class="duel-card" id="create-duel-form">
+            <h2>Create a private duel</h2>
+            <p>Get a room code and invite your opponent privately.</p>
+            <label for="create-name">Your username</label>
+            <input id="create-name" name="username" maxlength="20" autocomplete="nickname" required>
+            <button class="duel-primary-button" type="submit">Create private duel</button>
+          </form>
+
+          <form class="duel-card" id="join-duel-form">
+            <h2>Join a private duel</h2>
+            <p>Enter the private room code from your opponent.</p>
+            <label for="join-name">Your username</label>
+            <input id="join-name" name="username" maxlength="20" autocomplete="nickname" required>
+            <label for="duel-code-input">Room code</label>
+            <input id="duel-code-input" name="code" maxlength="6" pattern="[A-Fa-f0-9]{6}" autocomplete="off" required>
+            <button class="duel-secondary-button" type="submit">Join private duel</button>
+          </form>
+        </section>
       </section>
     </section>
 
-    <nav class="page-nav bottom-nav" aria-label="Main navigation">
+    <section class="timer-layout duel-room" id="duel-room" aria-label="Duel match" hidden>
+      <section class="timer-screen duel-screen" aria-label="Current solve">
+        <header class="timer-titlebar duel-titlebar">
+          <a class="timer-brand" href="index.html" aria-label="Cube Timer home">
+            <img class="brand-logo" src="logo.svg" alt="">
+          </a>
+          <h1>Duel</h1>
+          <div class="duel-room-actions">
+            <div class="duel-room-code-group">
+              <p class="eyebrow" id="duel-room-visibility">PRIVATE ROOM</p>
+              <p class="duel-room-code" id="duel-room-code">------</p>
+            </div>
+            <button class="duel-secondary-button duel-copy-button" id="copy-duel-code" type="button">Copy code</button>
+          </div>
+        </header>
+
+        <div class="scramble-wrap">
+          <p class="scramble duel-scramble" id="duel-scramble" aria-live="polite">Your five shared scrambles will appear here.</p>
+        </div>
+
+        <div class="timer-focus">
+          <div class="timer-reading">
+            <p class="timer duel-timer" id="duel-timer" role="timer" aria-label="0 seconds">0.000</p>
+            <p class="timer-hint duel-timer-hint" id="duel-timer-hint" aria-live="polite">Share the room code with a second player to begin.</p>
+            <button class="mobile-control duel-timer-button" id="duel-timer-button" type="button" disabled>Start solve</button>
+          </div>
+        </div>
+
+        <div class="timer-cube-preview duel-cube-preview" id="duel-cube-preview" hidden>
+          <div class="cube-net" role="img" aria-label="Cube colors after the current duel scramble">
+            <span class="cube-face cube-up"></span>
+            <span class="cube-face cube-left"></span>
+            <span class="cube-face cube-front"></span>
+            <span class="cube-face cube-right"></span>
+            <span class="cube-face cube-back"></span>
+            <span class="cube-face cube-down"></span>
+          </div>
+        </div>
+      </section>
+
+      <aside class="timer-side-panel duel-side-panel" aria-label="Duel scores">
+        <section class="duel-status">
+          <p class="duel-match-status" id="duel-match-status" aria-live="polite"></p>
+          <p class="duel-round-label" id="duel-round-label">Waiting for opponent</p>
+        </section>
+        <section class="duel-results" aria-labelledby="duel-results-heading">
+          <div class="guide-section-heading">
+            <p class="eyebrow">SAME SCRAMBLES · ALTERNATING START</p>
+            <h2 id="duel-results-heading">Best of 5</h2>
+          </div>
+          <div class="duel-table-wrap">
+            <table class="duel-table">
+              <thead>
+                <tr>
+                  <th scope="col">Round</th>
+                  <th scope="col" id="duel-player-one-heading">Player 1</th>
+                  <th scope="col" id="duel-player-two-heading">Player 2</th>
+                </tr>
+              </thead>
+              <tbody id="duel-results-body"></tbody>
+              <tfoot>
+                <tr>
+                  <th scope="row">Ao5</th>
+                  <td id="duel-player-one-average">--</td>
+                  <td id="duel-player-two-average">--</td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+          <p class="duel-winner" id="duel-winner" aria-live="polite"></p>
+        </section>
+      </aside>
+    </section>
+
+    <nav class="page-nav bottom-nav timer-bottom-nav" aria-label="Main navigation">
       <a class="nav-link" href="index.html">Timer</a>
       <a class="nav-link" href="advanced.html">ALGS</a>
       <a class="nav-link is-current" href="duel.html" aria-current="page">Duel</a>
     </nav>
-
-    <footer>Both players solve every scramble. The player who starts alternates each round.</footer>
   </main>
 </body>
 </html>

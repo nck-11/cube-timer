@@ -6,13 +6,27 @@ const setupNote = document.querySelector(".duel-setup-note");
 const lobby = document.querySelector("#duel-lobby");
 const room = document.querySelector("#duel-room");
 const createForm = document.querySelector("#create-duel-form");
+const publicCreateForm = document.querySelector("#create-public-duel-form");
+const publicPlayerNameInput = document.querySelector("#public-player-name");
+const publicRoomList = document.querySelector("#public-room-list");
+const refreshPublicRoomsButton = document.querySelector("#refresh-public-rooms");
 const joinForm = document.querySelector("#join-duel-form");
 const joinCodeInput = document.querySelector("#duel-code-input");
 const roomCodeDisplay = document.querySelector("#duel-room-code");
+const roomVisibilityDisplay = document.querySelector("#duel-room-visibility");
 const matchStatus = document.querySelector("#duel-match-status");
 const roundLabel = document.querySelector("#duel-round-label");
 const scrambleDisplay = document.querySelector("#duel-scramble");
 const timerDisplay = document.querySelector("#duel-timer");
+const cubePreview = document.querySelector("#duel-cube-preview");
+const cubeFaceElements = {
+  up: document.querySelector(".duel-cube-preview .cube-up"),
+  left: document.querySelector(".duel-cube-preview .cube-left"),
+  front: document.querySelector(".duel-cube-preview .cube-front"),
+  right: document.querySelector(".duel-cube-preview .cube-right"),
+  back: document.querySelector(".duel-cube-preview .cube-back"),
+  down: document.querySelector(".duel-cube-preview .cube-down")
+};
 const timerHint = document.querySelector("#duel-timer-hint");
 const timerButton = document.querySelector("#duel-timer-button");
 const resultsBody = document.querySelector("#duel-results-body");
@@ -42,6 +56,8 @@ let timerFrame = 0;
 let timerState = "idle";
 let isSubmitting = false;
 let pendingTime = null;
+let renderedCubeScramble = "";
+let isJoiningPublicRoom = false;
 let spaceArmingTimer = 0;
 let spaceButtonTarget = null;
 
@@ -92,16 +108,16 @@ async function hashSecret(secret) {
     .join("");
 }
 
-function storeParticipant(code, nextParticipant) {
+function storeParticipant(roomKey, nextParticipant) {
   localStorage.setItem(
-    `${participantStoragePrefix}${code}`,
+    `${participantStoragePrefix}${roomKey}`,
     JSON.stringify(nextParticipant)
   );
 }
 
-function loadParticipant(code) {
+function loadParticipant(roomKey) {
   const storedParticipant = localStorage.getItem(
-    `${participantStoragePrefix}${code}`
+    `${participantStoragePrefix}${roomKey}`
   );
   if (!storedParticipant) return null;
 
@@ -109,11 +125,77 @@ function loadParticipant(code) {
   if (
     typeof parsedParticipant.name !== "string" ||
     typeof parsedParticipant.secret !== "string" ||
-    ![1, 2].includes(parsedParticipant.playerNumber)
+    ![1, 2].includes(parsedParticipant.playerNumber) ||
+    (parsedParticipant.isPublic === true &&
+      (typeof parsedParticipant.publicRoomId !== "string" ||
+        typeof parsedParticipant.code !== "string"))
   ) {
     throw new TypeError("Saved duel participant details are invalid.");
   }
-  return parsedParticipant;
+  return { ...parsedParticipant, isPublic: parsedParticipant.isPublic === true };
+}
+
+function renderPublicRooms(rooms) {
+  publicRoomList.replaceChildren();
+
+  if (!Array.isArray(rooms)) {
+    throw new TypeError("The public room list response is invalid.");
+  }
+
+  if (rooms.length === 0) {
+    const emptyMessage = document.createElement("p");
+    emptyMessage.className = "duel-public-empty";
+    emptyMessage.textContent = "No open public rooms. Create one to get started.";
+    publicRoomList.append(emptyMessage);
+    return;
+  }
+
+  rooms.forEach((roomInfo) => {
+    if (
+      typeof roomInfo.id !== "string" ||
+      typeof roomInfo.player1Name !== "string"
+    ) {
+      throw new TypeError("A public room entry is invalid.");
+    }
+
+    const roomItem = document.createElement("div");
+    const roomDetails = document.createElement("div");
+    const ownerName = document.createElement("strong");
+    const roomState = document.createElement("span");
+    const joinButton = document.createElement("button");
+
+    roomItem.className = "duel-public-room";
+    roomItem.setAttribute("role", "listitem");
+    roomDetails.className = "duel-public-room-details";
+    ownerName.className = "duel-public-room-owner";
+    ownerName.textContent = roomInfo.player1Name;
+    roomState.className = "duel-public-room-state";
+    roomState.textContent = "Waiting for an opponent";
+    joinButton.className = "duel-secondary-button";
+    joinButton.type = "button";
+    joinButton.dataset.roomId = roomInfo.id;
+    joinButton.textContent = "Join";
+
+    roomDetails.append(ownerName, roomState);
+    roomItem.append(roomDetails, joinButton);
+    publicRoomList.append(roomItem);
+  });
+}
+
+async function refreshPublicRooms() {
+  if (!supabase || lobby.hidden) return;
+
+  try {
+    const { data, error } = await supabase.rpc("duel_list_public_rooms");
+    if (error) throw error;
+    renderPublicRooms(data);
+  } catch (error) {
+    const errorMessage = document.createElement("p");
+    errorMessage.className = "duel-public-empty is-error";
+    errorMessage.textContent =
+      error.message || "Could not load public rooms. Try refreshing.";
+    publicRoomList.replaceChildren(errorMessage);
+  }
 }
 
 function getResultTime(round, playerNumber) {
@@ -202,7 +284,10 @@ function renderTimerControls() {
   timerDisplay.classList.toggle("is-armed", timerState === "armed");
 
   if (!duelState || duelState.status === "waiting") {
-    timerHint.textContent = "Share the room code with your opponent.";
+    timerHint.textContent =
+      participant?.isPublic === true
+        ? "Your public room is open for another player to join."
+        : "Share the private room code with your opponent.";
   } else if (duelState.status === "finished") {
     timerHint.textContent = "The final result is saved in this room.";
   } else if (isSubmitting) {
@@ -257,9 +342,14 @@ function renderDuel() {
   lobby.hidden = true;
   room.hidden = false;
   roomCodeDisplay.textContent = code;
+  const isPublicRoom = participant.isPublic === true;
+  roomVisibilityDisplay.textContent = isPublicRoom ? "PUBLIC ROOM" : "PRIVATE ROOM";
+  roomCodeDisplay.hidden = isPublicRoom;
+  copyCodeButton.hidden = isPublicRoom;
   renderResults();
 
   if (duelState.status === "waiting") {
+    cubePreview.hidden = true;
     matchStatus.textContent = "Waiting for a second player to join.";
     roundLabel.textContent = "Ready when both players have joined";
     scrambleDisplay.textContent = "The shared scrambles will appear when the duel starts.";
@@ -268,6 +358,7 @@ function renderDuel() {
   }
 
   if (duelState.status === "finished") {
+    cubePreview.hidden = true;
     matchStatus.textContent = "Duel complete.";
     roundLabel.textContent = "All five scrambles are done";
     scrambleDisplay.textContent = "Compare your trimmed Ao5 averages below.";
@@ -291,6 +382,11 @@ function renderDuel() {
     : `Waiting for ${playerName} to solve.`;
   roundLabel.textContent = `Scramble ${currentRound} of 5 · ${firstName} goes first`;
   scrambleDisplay.textContent = nextScramble;
+  cubePreview.hidden = false;
+  if (renderedCubeScramble !== nextScramble) {
+    window.CubePreview.render(nextScramble, cubeFaceElements);
+    renderedCubeScramble = nextScramble;
+  }
   renderTimerControls();
 }
 
@@ -411,27 +507,93 @@ function toggleTimer() {
   updateTimer();
 }
 
-async function createDuel(event) {
+async function createDuel(event, isPublic = false) {
   event.preventDefault();
   try {
     requireSupabase();
-    const name = normalizeName(new FormData(createForm).get("username"));
+    const activeForm = isPublic ? publicCreateForm : createForm;
+    const name = normalizeName(new FormData(activeForm).get("username"));
     const secret = createSecret();
-    const { data: code, error } = await supabase.rpc("duel_create", {
+    const rpcName = isPublic ? "duel_create_public" : "duel_create";
+    const { data, error } = await supabase.rpc(rpcName, {
       p_player_name: name,
       p_scrambles: makeScrambles(),
       p_secret_hash: await hashSecret(secret)
     });
     if (error) throw error;
 
-    const nextParticipant = { code, name, secret, playerNumber: 1 };
-    storeParticipant(code, nextParticipant);
+    const code = isPublic ? data?.code : data;
+    const publicRoomId = isPublic ? data?.id : null;
+    if (
+      typeof code !== "string" ||
+      (isPublic && typeof publicRoomId !== "string")
+    ) {
+      throw new TypeError("The duel creation response is invalid.");
+    }
+
+    const nextParticipant = {
+      code,
+      name,
+      secret,
+      playerNumber: 1,
+      isPublic,
+      publicRoomId
+    };
+    storeParticipant(isPublic ? publicRoomId : code, nextParticipant);
     const url = new URL(window.location.href);
-    url.searchParams.set("code", code);
+    url.searchParams.delete("code");
+    url.searchParams.delete("public");
+    url.searchParams.set(
+      isPublic ? "public" : "code",
+      isPublic ? publicRoomId : code
+    );
     window.history.replaceState(null, "", url);
     showParticipant(nextParticipant);
   } catch (error) {
     setNotice(error.message || "Could not create the duel.", true);
+  }
+}
+
+async function joinPublicDuel(roomId, joinButton) {
+  if (isJoiningPublicRoom) return;
+  if (!publicPlayerNameInput.reportValidity()) return;
+
+  isJoiningPublicRoom = true;
+  joinButton.disabled = true;
+  try {
+    requireSupabase();
+    const name = normalizeName(publicPlayerNameInput.value);
+    const secret = createSecret();
+    const { data: code, error } = await supabase.rpc("duel_join_public", {
+      p_room_id: roomId,
+      p_player_name: name,
+      p_secret_hash: await hashSecret(secret)
+    });
+    if (error) throw error;
+    if (typeof code !== "string") {
+      throw new TypeError("The public room join response is invalid.");
+    }
+
+    const nextParticipant = {
+      code,
+      name,
+      secret,
+      playerNumber: 2,
+      isPublic: true,
+      publicRoomId: roomId
+    };
+    storeParticipant(roomId, nextParticipant);
+    const url = new URL(window.location.href);
+    url.searchParams.delete("code");
+    url.searchParams.delete("public");
+    url.searchParams.set("public", roomId);
+    window.history.replaceState(null, "", url);
+    showParticipant(nextParticipant);
+  } catch (error) {
+    setNotice(error.message || "Could not join the public room.", true);
+    joinButton.disabled = false;
+  } finally {
+    isJoiningPublicRoom = false;
   }
 }
 
@@ -450,9 +612,17 @@ async function joinDuel(event) {
     });
     if (error) throw error;
 
-    const nextParticipant = { code, name, secret, playerNumber: 2 };
+    const nextParticipant = {
+      code,
+      name,
+      secret,
+      playerNumber: 2,
+      isPublic: false,
+      publicRoomId: null
+    };
     storeParticipant(code, nextParticipant);
     const url = new URL(window.location.href);
+    url.searchParams.delete("public");
     url.searchParams.set("code", code);
     window.history.replaceState(null, "", url);
     showParticipant(nextParticipant);
@@ -537,7 +707,15 @@ function handleSpaceUp(event) {
 }
 
 createForm.addEventListener("submit", createDuel);
+publicCreateForm.addEventListener("submit", (event) => createDuel(event, true));
 joinForm.addEventListener("submit", joinDuel);
+refreshPublicRoomsButton.addEventListener("click", refreshPublicRooms);
+publicRoomList.addEventListener("click", (event) => {
+  if (!(event.target instanceof Element)) return;
+  const joinButton = event.target.closest("button[data-room-id]");
+  if (!joinButton || !publicRoomList.contains(joinButton)) return;
+  joinPublicDuel(joinButton.dataset.roomId, joinButton);
+});
 timerButton.addEventListener("click", toggleTimer);
 document.addEventListener("keydown", handleSpaceDown);
 document.addEventListener("keyup", handleSpaceUp);
@@ -563,8 +741,23 @@ const codeFromUrl = new URLSearchParams(window.location.search)
   .get("code")
   ?.trim()
   .toUpperCase();
+const publicRoomIdFromUrl = new URLSearchParams(window.location.search)
+  .get("public")
+  ?.trim();
 
-if (codeFromUrl) {
+if (publicRoomIdFromUrl) {
+  try {
+    const savedParticipant = loadParticipant(publicRoomIdFromUrl);
+    if (
+      savedParticipant?.isPublic &&
+      savedParticipant.publicRoomId === publicRoomIdFromUrl
+    ) {
+      showParticipant(savedParticipant);
+    }
+  } catch (error) {
+    setNotice(error.message || "Could not restore the public duel.", true);
+  }
+} else if (codeFromUrl) {
   joinCodeInput.value = codeFromUrl;
   try {
     const savedParticipant = loadParticipant(codeFromUrl);
@@ -577,7 +770,14 @@ if (codeFromUrl) {
   }
 }
 
-if (!supabase) {
+if (supabase) {
+  refreshPublicRooms();
+  window.setInterval(refreshPublicRooms, 5000);
+} else {
+  const setupMessage = document.createElement("p");
+  setupMessage.className = "duel-public-empty";
+  setupMessage.textContent = "Configure Supabase to browse public rooms.";
+  publicRoomList.replaceChildren(setupMessage);
   setNotice(
     "Set up Supabase first: run supabase-setup.sql, then add your project URL and publishable key to supabase-config.js.",
     true
