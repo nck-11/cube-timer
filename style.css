@@ -1373,6 +1373,30 @@ a:focus-visible {
   letter-spacing: -0.02em;
 }
 
+.timer-account-links {
+  position: absolute;
+  top: 50%;
+  right: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  transform: translateY(-50%);
+}
+
+.timer-account-links a {
+  color: #c9bdf5;
+  font-size: 12px;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.timer-account-links .timer-signup-link {
+  padding: 6px 10px;
+  border: 1px solid #49405f;
+  border-radius: 999px;
+  color: #f1edff;
+}
+
 .scramble-wrap {
   position: relative;
   width: min(100%, 1000px);
@@ -1680,6 +1704,18 @@ a:focus-visible {
 
   .timer-titlebar {
     min-height: 42px;
+  }
+
+  .timer-account-links {
+    gap: 7px;
+  }
+
+  .timer-account-links a {
+    font-size: 11px;
+  }
+
+  .timer-account-links .timer-signup-link {
+    padding: 5px 7px;
   }
 
   .scramble-wrap {

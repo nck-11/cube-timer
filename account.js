@@ -23,7 +23,8 @@ const recoveryParams = new URLSearchParams(window.location.hash.slice(1));
 const isPasswordRecovery =
   recoveryParams.get("type") === "recovery" ||
   new URLSearchParams(window.location.search).has("reset");
-let mode = isPasswordRecovery ? "update-password" : "login";
+const isSignUpRequested = new URLSearchParams(window.location.search).get("signup") === "1";
+let mode = isPasswordRecovery ? "update-password" : isSignUpRequested ? "signup" : "login";
 let session = null;
 let isSubmitting = false;
 
